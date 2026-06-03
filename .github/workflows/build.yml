@@ -26,9 +26,12 @@ jobs:
       - name: Build .app
         run: pyinstaller slugger.spec
 
+      - name: Remove intermediate build folder
+        run: rm -rf dist/Slugger
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: Slugger-Mac-App
-          path: dist/Slugger.app
+          path: dist/
           retention-days: 30
