@@ -26,12 +26,9 @@ jobs:
       - name: Build .app
         run: pyinstaller slugger.spec
 
-      - name: Package .app
-        run: ditto -c -k --sequesterRsrc --keepParent dist/Slugger.app Slugger.zip
-
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: Slugger-Mac-App
-          path: Slugger.zip
+          path: dist/Slugger.app
           retention-days: 30
