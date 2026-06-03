@@ -4,7 +4,32 @@
 
 ---
 
-## Step 1 — Check Python is installed
+## Option A — Standalone app (no Python required)
+
+Download **Slugger.zip** from the [latest release](https://github.com/tug-lumo/Slugger-Mac/actions), unzip it, and move **Slugger.app** anywhere you like (Applications folder is fine).
+
+**First launch only — Mac security step:**
+
+Because the app isn't signed with an Apple certificate, macOS will block it on first open. Do this once:
+
+1. Open **Terminal** (press `⌘ Space`, type `Terminal`, hit Enter)
+2. Drag **Slugger.app** from Finder into the Terminal window — the path fills in automatically
+3. Type `xattr -cr ` before the path so it reads like:
+   ```
+   xattr -cr /path/to/Slugger.app
+   ```
+4. Press Enter. No confirmation message — that's normal.
+5. Double-click **Slugger.app** — it will open cleanly from now on.
+
+> If macOS still shows a security prompt, go to **System Settings → Privacy & Security** and click **Open Anyway**.
+
+---
+
+## Option B — Run from source (requires Python 3)
+
+---
+
+### Step 1 — Check Python is installed
 
 Open **Terminal** (press `⌘ Space`, type `Terminal`, hit Enter).
 
@@ -18,13 +43,13 @@ You should see something like `Python 3.11.4`. If you get an error, download Pyt
 
 ---
 
-## Step 2 — Find the app folder in Terminal
+### Step 2 — Find the app folder in Terminal
 
 In Terminal, type `cd ` (with a space after it), then drag the **screenplay_reader - Mac** folder from Finder into the Terminal window. The path will fill in automatically. Press Enter.
 
 ---
 
-## Step 3 — Make the launcher executable (one time only)
+### Step 3 — Make the launcher executable (one time only)
 
 Type this and press Enter:
 
@@ -36,7 +61,7 @@ You won't see any confirmation — that's normal.
 
 ---
 
-## Step 4 — Launch the app
+### Step 4 — Launch the app
 
 Go to the **screenplay_reader - Mac** folder in Finder and double-click **run.command**.
 
@@ -47,7 +72,7 @@ A Terminal window will open. It will:
 
 ---
 
-## Every time after that
+### Every time after that
 
 Just double-click **run.command**. No other steps needed.
 
@@ -55,7 +80,7 @@ To stop the app, click the Terminal window and press `Ctrl+C`.
 
 ---
 
-## Troubleshooting
+### Troubleshooting
 
 **"Permission denied" when double-clicking** — you need to repeat Step 3.
 
