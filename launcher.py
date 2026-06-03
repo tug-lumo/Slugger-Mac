@@ -36,6 +36,5 @@ if __name__ == "__main__":
         _resource("app.py"),
         "--server.headless=true",
         "--browser.gatherUsageStats=false",
-        "--server.port=8501",
     ]
     sys.exit(stcli.main())
