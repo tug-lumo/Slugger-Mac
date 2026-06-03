@@ -22,24 +22,34 @@ C_ALT_ROW     = "EBF0FA"
 
 # Recommendation colours
 _REC_COLOURS = {
-    "VP (INT. VEHICLE)":  "E2EFDA",   # green
-    "VP (INT. AIRCRAFT)": "D9EAD3",   # green-teal
-    "LUMOSTAGE":          "FFF2CC",   # yellow
-    "ON LOCATION":        "DDEBF7",   # light blue
-    "OPTION: EITHER":     "F2F2F2",   # light grey
-    "SET BUILD":          "FCE4D6",   # orange
-    "VFX":                "F4CCCC",   # red-pink
-    "OMITTED":            "D9D9D9",   # mid grey
+    "VPROD":             "FFF2CC",
+    "INT. CAR":          "E2EFDA",
+    "INT. PLANE":        "D9EAD3",
+    "HYBRID VIRTUAL":    "FCE4D6",
+    "INT. SUBWAY TRAIN": "C4D9F5",
+    "INT. PLATFORM":     "B8D4F0",
+    "EXT. ROOFTOP":      "D4EAD4",
+    "EXT. DESERT":       "F5E6C4",
+    "EITHER":            "C8D8E0",
+    "LOCATION":          "DDEBF7",
+    "STUDIO":            "E8E8E8",
+    "VFX":               "F4CCCC",
+    "OMITTED":           "D9D9D9",
+    # Legacy names — tolerate imports from old exports
+    "LUMOSTAGE":         "FFF2CC",
+    "VP (INT. VEHICLE)": "E2EFDA",
+    "VP (INT. AIRCRAFT)":"D9EAD3",
+    "SET BUILD":         "FCE4D6",
+    "ON LOCATION":       "DDEBF7",
+    "OPTION: EITHER":    "C8D8E0",
 }
 
 def _rec_fill(recommendation) -> PatternFill:
     if not isinstance(recommendation, str):
         return PatternFill("solid", fgColor="FFFFFF")
-    key = recommendation.upper().strip()
-    for k, colour in _REC_COLOURS.items():
-        if k in key:
-            return PatternFill("solid", fgColor=colour)
-    return PatternFill("solid", fgColor="FFFFFF")
+    key = recommendation.strip()
+    colour = _REC_COLOURS.get(key) or _REC_COLOURS.get(key.upper()) or "FFFFFF"
+    return PatternFill("solid", fgColor=colour)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

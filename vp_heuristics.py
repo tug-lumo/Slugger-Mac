@@ -35,29 +35,45 @@ def _rules_file() -> Path:
 _RULES_FILE = _rules_file()
 
 # ── Recommendation labels ────────────────────────────────────────────────────
-R_VP_VEHICLE  = "VP (INT. Vehicle)"
-R_VP_AIRCRAFT = "VP (INT. Aircraft)"
-R_LUMOSTAGE   = "Lumostage"
-R_ON_LOCATION = "On Location"
-R_EITHER      = "Option: Either"
-R_SET_BUILD   = "Set Build"
-R_VFX         = "VFX"
-R_OMITTED     = "OMITTED"
+R_VPROD         = "VPROD"
+R_INT_CAR       = "INT. CAR"
+R_INT_PLANE     = "INT. PLANE"
+R_HYBRID_VIRTUAL = "HYBRID VIRTUAL"
+R_SUBWAY_TRAIN  = "INT. SUBWAY TRAIN"
+R_PLATFORM      = "INT. PLATFORM"
+R_ROOFTOP       = "EXT. ROOFTOP"
+R_DESERT        = "EXT. DESERT"
+R_EITHER        = "EITHER"
+R_LOCATION      = "LOCATION"
+R_STUDIO        = "STUDIO"
+R_VFX           = "VFX"
+R_OMITTED       = "OMITTED"
+
+# Legacy aliases (kept for any code that still references the old names)
+R_LUMOSTAGE   = R_VPROD
+R_VP_VEHICLE  = R_INT_CAR
+R_VP_AIRCRAFT = R_INT_PLANE
+R_SET_BUILD   = R_HYBRID_VIRTUAL
+R_ON_LOCATION = R_LOCATION
 
 ALL_OPTIONS = [
-    R_VP_VEHICLE,
-    R_VP_AIRCRAFT,
-    R_LUMOSTAGE,
-    R_ON_LOCATION,
+    R_VPROD,
+    R_INT_CAR,
+    R_INT_PLANE,
+    R_HYBRID_VIRTUAL,
+    R_SUBWAY_TRAIN,
+    R_PLATFORM,
+    R_ROOFTOP,
+    R_DESERT,
     R_EITHER,
-    R_SET_BUILD,
+    R_LOCATION,
+    R_STUDIO,
     R_VFX,
     R_OMITTED,
 ]
 
 # ── Keyword banks ─────────────────────────────────────────────────────────────
 
-# INT. moving-vehicle scenes
 _INT_VEHICLE = {
     "CAR", "VEHICLE", "TRUCK", "VAN", "BUS", "LIMO", "LIMOUSINE",
     "TAXI", "CAB", "RIDESHARE", "UBER", "JEEP", "SUV", "SEDAN",
@@ -70,36 +86,56 @@ _INT_VEHICLE = {
     "GETAWAY CAR", "RACE CAR", "STUNT CAR",
 }
 
-# Moving vessels / transit (INT. or EXT.)
+# Subway / rail interiors → INT. SUBWAY TRAIN
+_SUBWAY_KW = {
+    "SUBWAY", "SUBWAY CAR", "SUBWAY TRAIN", "SUBWAY INTERIOR",
+    "METRO", "METRO CAR", "UNDERGROUND TRAIN",
+    "TRAIN CAR", "RAIL CAR", "DINING CAR", "SLEEPER CAR",
+}
+
+# Transit platforms → INT. PLATFORM
+_PLATFORM_KW = {
+    "PLATFORM", "SUBWAY PLATFORM", "TRAIN PLATFORM",
+    "METRO PLATFORM", "TRANSIT PLATFORM", "BUS PLATFORM",
+}
+
+# Aircraft / vessels → INT. PLANE
 _INT_AIRCRAFT = {
     "AIRPLANE", "PLANE", "JET", "AIRCRAFT", "COCKPIT",
     "HELICOPTER", "CHOPPER", "PRIVATE JET", "CARGO PLANE",
     "MILITARY PLANE", "FIGHTER JET",
-    "TRAIN", "SUBWAY", "METRO", "RAIL CAR", "DINING CAR", "SLEEPER CAR",
     "BOAT", "SPEEDBOAT", "YACHT", "FERRY", "CRUISE SHIP", "SHIP",
     "SUBMARINE", "GONDOLA", "CABLE CAR",
 }
 
-# ── "DOESN'T EXIST" — impossible or fantastical ───────────────────────────────
+# EXT. Rooftop → EXT. ROOFTOP
+_ROOFTOP_KW = {
+    "ROOFTOP", "ROOF TOP", "ROOF TERRACE", "ROOFTOP TERRACE",
+    "PENTHOUSE TERRACE", "BUILDING ROOFTOP",
+}
+
+# EXT. Desert → EXT. DESERT (checked before distant-landscape pass)
+_DESERT_KW = {
+    "DESERT", "SAHARA", "MOJAVE", "SONORAN", "ARABIAN DESERT",
+    "BADLANDS", "CANYON", "GRAND CANYON", "MESA", "SCRUBLAND",
+}
+
+# ── "DOESN'T EXIST" ───────────────────────────────────────────────────────────
 _DOESNT_EXIST = {
-    # Space / sci-fi
     "SPACE", "OUTER SPACE", "SPACESHIP", "SPACECRAFT", "SPACE STATION",
     "ALIEN PLANET", "ALIEN SHIP", "ALIEN WORLD", "MOTHERSHIP",
     "WORMHOLE", "BLACK HOLE", "NEBULA",
-    # Digital / virtual
     "DIGITAL WORLD", "CYBERSPACE", "VIRTUAL REALITY", "VR WORLD",
     "INSIDE COMPUTER", "THE MATRIX",
-    # Pure fantasy
     "FANTASY KINGDOM", "ENCHANTED FOREST", "MAGICAL REALM", "DRAGON",
     "CASTLE GREAT HALL", "DUNGEON", "THRONE ROOM",
-    # Period — no longer exists as-is
     "MEDIEVAL", "ANCIENT ROME", "ANCIENT EGYPT", "ROMAN FORUM",
     "VICTORIAN LONDON", "WILD WEST", "OLD WEST", "FRONTIER TOWN",
     "CIVIL WAR BATTLEFIELD", "WWI TRENCH", "WWII BUNKER",
     "PROHIBITION ERA",
 }
 
-# ── "DANGEROUS" — unsafe to shoot practically ────────────────────────────────
+# ── "DANGEROUS" ───────────────────────────────────────────────────────────────
 _DANGEROUS = {
     "CLIFF EDGE", "CLIFF TOP", "CLIFF FACE",
     "ROOFTOP EDGE", "HIGH RISE EXTERIOR", "BUILDING LEDGE",
@@ -113,10 +149,8 @@ _DANGEROUS = {
     "EXPLOSION SITE", "CHEMICAL PLANT EXPLOSION",
 }
 
-# ── "DIFFICULT/DISTANT" — far from Lower Mainland BC ────────────────────────
-# Production base is Vancouver/Lower Mainland. These are geographically distant.
+# ── "DIFFICULT/DISTANT" ───────────────────────────────────────────────────────
 _DISTANT_CITIES = {
-    # USA
     "NEW YORK", "NYC", "MANHATTAN", "BROOKLYN", "THE BRONX", "QUEENS",
     "TIMES SQUARE", "WALL STREET", "CENTRAL PARK", "PENN STATION",
     "GRAND CENTRAL", "BROOKLYN BRIDGE",
@@ -127,9 +161,7 @@ _DISTANT_CITIES = {
     "SAN FRANCISCO", "GOLDEN GATE",
     "HOUSTON", "DALLAS", "BOSTON", "ATLANTA", "DETROIT",
     "LAS VEGAS", "THE STRIP", "NEW ORLEANS", "PHOENIX", "DENVER",
-    # Canada (outside BC)
     "TORONTO", "MONTREAL", "CALGARY", "EDMONTON", "OTTAWA", "WINNIPEG",
-    # International
     "LONDON", "PARIS", "BERLIN", "ROME", "MADRID", "AMSTERDAM",
     "MOSCOW", "PRAGUE", "VIENNA", "BUDAPEST", "WARSAW",
     "TOKYO", "OSAKA", "KYOTO", "HONG KONG", "BEIJING", "SHANGHAI",
@@ -142,49 +174,35 @@ _DISTANT_CITIES = {
     "ATHENS", "BARCELONA",
 }
 
-# Landscapes/environments that don't exist in or near Lower Mainland BC
 _DISTANT_LANDSCAPES = {
-    "DESERT", "SAHARA", "MOJAVE", "SONORAN", "ARABIAN DESERT",
     "SAVANNA", "SAFARI", "AFRICAN PLAIN", "SERENGETI",
     "TROPICAL BEACH", "CARIBBEAN BEACH", "TROPICAL ISLAND",
     "JUNGLE", "TROPICAL RAINFOREST", "AMAZON",
-    "STEPPE", "GRASSLAND", "PRAIRIE",  # BC has some but not classic prairie
-    "BADLANDS", "CANYON", "GRAND CANYON", "MESA",
+    "STEPPE", "GRASSLAND", "PRAIRIE",
     "SWAMP", "BAYOU", "EVERGLADES",
 }
 
-# ── EXT. scenes that need real environment — crowds, scale, authentic setting
-# These are On Location even if the city is distant (go there or use a stand-in).
-# Contrast with intimate/contained EXT. scenes that work well on an LED stage.
-# NOTE: HIGHWAY / FREEWAY intentionally excluded — driving environments are VP-friendly.
 _ENVIRONMENTAL_EXT = {
-    # Streets and pedestrian environments (need authentic movement/scale)
     "STREET", "AVENUE", "BOULEVARD", "ROAD",
     "CROSSWALK", "CROSSING", "PEDESTRIAN CROSSING",
     "BUSY STREET", "CROWDED STREET", "CITY STREET",
     "TIMES SQUARE", "GRAND CENTRAL TERMINAL", "PENN STATION",
-    # Crowds and events
     "FESTIVAL", "PARADE", "STREET PARADE", "CARNIVAL",
     "PROTEST", "RALLY", "DEMONSTRATION", "RIOT",
     "MARKET", "STREET MARKET", "BAZAAR", "FARMERS MARKET",
-    # Large public spaces
     "PLAZA", "TOWN SQUARE", "PUBLIC SQUARE", "PIAZZA",
     "BOARDWALK", "BEACHFRONT BOARDWALK",
     "STADIUM", "SPORTS STADIUM", "ARENA",
     "AIRPORT TERMINAL", "TRAIN STATION", "BUS TERMINAL",
-    # Natural wide environments
-    "BEACH",  # wide beach — intimate beach can be LED
+    "BEACH",
     "WATERFRONT", "HARBOUR", "PORT",
 }
 
-# ── "DOESN'T EXIST" subtype — strong Lumostage even if not fully fantastical ─
 _LUMOSTAGE_STRONG = {
-    # Extreme / impossible natural EXT.
     "VOLCANO", "GLACIER", "ARCTIC TUNDRA", "ANTARCTIC",
     "MOUNTAIN PEAK", "MOUNTAINTOP", "SUMMIT",
     "CANYON RIM", "CRATER",
     "UNDERWATER", "OCEAN FLOOR", "DEEP SEA", "SEABED",
-    # Controlled tech/institutional INT.
     "OPERATING ROOM", "SURGERY ROOM", "OR ",
     "MORGUE", "AUTOPSY ROOM",
     "SERVER ROOM", "DATA CENTER", "CONTROL ROOM", "MISSION CONTROL",
@@ -193,7 +211,6 @@ _LUMOSTAGE_STRONG = {
     "NEWSROOM", "BROADCAST STUDIO", "SOUNDSTAGE",
 }
 
-# ── Local / easily practical EXT. locations ───────────────────────────────────
 _PRACTICAL_EXT = {
     "PARKING LOT", "PARKING GARAGE", "SIDEWALK", "ALLEY", "ALLEYWAY",
     "STREET CORNER", "INTERSECTION",
@@ -211,7 +228,6 @@ _PRACTICAL_EXT = {
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _kw_match(keyword_set: set[str], text: str) -> bool:
-    """True if any keyword from the set appears as a whole word in text."""
     for kw in keyword_set:
         if re.search(r"\b" + re.escape(kw) + r"\b", text):
             return True
@@ -224,7 +240,8 @@ def load_rules() -> dict:
     if _RULES_FILE.exists():
         try:
             with open(_RULES_FILE, encoding="utf-8") as f:
-                return json.load(f)
+                rules = json.load(f)
+            return migrate_rules(rules)
         except (json.JSONDecodeError, OSError):
             pass
     return {"learned": {}, "version": 1}
@@ -234,6 +251,26 @@ def save_rules(rules: dict) -> None:
     _RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(_RULES_FILE, "w", encoding="utf-8") as f:
         json.dump(rules, f, indent=2)
+
+
+def migrate_rules(rules: dict) -> dict:
+    """Rewrite any legacy recommendation names in learned rules to current names."""
+    from approach_config import LEGACY_NAMES
+    changed = False
+    for entry in rules.get("learned", {}).values():
+        old = entry.get("recommendation", "")
+        new = LEGACY_NAMES.get(old, old)
+        if new != old:
+            entry["recommendation"] = new
+            changed = True
+        for old_k in list(entry.get("pending", {}).keys()):
+            new_k = LEGACY_NAMES.get(old_k, old_k)
+            if new_k != old_k:
+                entry["pending"][new_k] = entry["pending"].pop(old_k)
+                changed = True
+    if changed:
+        save_rules(rules)
+    return rules
 
 
 def _norm(location: str) -> str:
@@ -248,16 +285,6 @@ def recommend_vp(
     time_of_day: str,
     rules: dict | None = None,
 ) -> tuple[str, str]:
-    """
-    Return (recommendation_label, confidence_string).
-
-    confidence values:
-        "learned"            — from stored user edits (exact match)
-        "learned (similar)"  — from stored user edits (root-location match)
-        "high"               — strong keyword signal
-        "medium"             — moderate keyword signal
-        "low"                — default / fallback
-    """
     if rules is None:
         rules = {}
 
@@ -266,7 +293,7 @@ def recommend_vp(
     is_int = "INT" in ie_up
     is_ext = "EXT" in ie_up
 
-    # ── 1. Learned rules (highest priority) ──────────────────────────────────
+    # 1. Learned rules
     norm = _norm(location)
     learned: dict = rules.get("learned", {})
     if norm in learned:
@@ -277,64 +304,65 @@ def recommend_vp(
         if root == learned_loc.split(" - ")[0].strip() and len(root) >= 3:
             return data["recommendation"], "learned (similar)"
 
-    # ── 2. Road vehicles — VP regardless of city (it's a moving-vehicle rig) ──
+    # 2. Road vehicles
     if is_int and _kw_match(_INT_VEHICLE, loc_up):
-        return R_VP_VEHICLE, "high"
+        return R_INT_CAR, "high"
 
-    # ── 3. Distant / Difficult locations (checked BEFORE transit vessels) ─────
-    # In a distant city an INT. subway or train is best built on the LED stage;
-    # checking here prevents SUBWAY triggering VP (Aircraft) for a NY scene.
+    # 3. EXT. Desert (checked before distant pass so it gets specific label)
+    if is_ext and _kw_match(_DESERT_KW, loc_up):
+        return R_DESERT, "high"
+
+    # 4. EXT. Rooftop
+    if is_ext and _kw_match(_ROOFTOP_KW, loc_up):
+        return R_ROOFTOP, "high"
+
+    # 5. Distant / Difficult
     is_distant = _kw_match(_DISTANT_CITIES, loc_up) or _kw_match(_DISTANT_LANDSCAPES, loc_up)
-
     if is_distant:
         if is_int:
-            # Interior of a distant location → build it on the LED stage
-            return R_LUMOSTAGE, "high"
+            return R_VPROD, "high"
         else:
-            # Environmental EXT. (crowds, scale, authentic atmosphere) → On Location
             if _kw_match(_ENVIRONMENTAL_EXT, loc_up):
-                return R_ON_LOCATION, "medium"
-            # Contained / intimate EXT. → Lumostage with a backdrop
-            return R_LUMOSTAGE, "medium"
+                return R_LOCATION, "medium"
+            return R_VPROD, "medium"
 
-    # ── 4. Local transit / moving vessels ─────────────────────────────────────
+    # 6. INT. Subway / rail
+    if is_int and _kw_match(_SUBWAY_KW, loc_up):
+        return R_SUBWAY_TRAIN, "high"
+
+    # 7. INT. Platform
+    if is_int and _kw_match(_PLATFORM_KW, loc_up):
+        return R_PLATFORM, "high"
+
+    # 8. Aircraft / vessels
     if _kw_match(_INT_AIRCRAFT, loc_up):
-        return R_VP_AIRCRAFT, "high"
+        return R_INT_PLANE, "high"
 
-    # ── 5. "Doesn't Exist" — fantastical / period / impossible ────────────────
-    # Lumostage is a large-exterior locations solution, not just small stages.
-    # EXT. alien worlds, space vistas, etc. can absolutely be shot on Lumostage.
-    # VFX (full-CG / compositing-only) is a manual call the human makes in context.
+    # 9. Doesn't Exist
     if _kw_match(_DOESNT_EXIST, loc_up):
-        return R_LUMOSTAGE, "high"
+        return R_VPROD, "high"
 
-    # ── 6. "Dangerous" — unsafe to shoot practically ──────────────────────────
+    # 10. Dangerous
     if _kw_match(_DANGEROUS, loc_up):
-        return R_LUMOSTAGE, "high"
+        return R_VPROD, "high"
 
-    # ── 7. Strong Lumostage signals (extreme or highly controlled) ────────────
+    # 11. Strong Lumostage signals
     if _kw_match(_LUMOSTAGE_STRONG, loc_up):
-        return R_LUMOSTAGE, "medium"
+        return R_VPROD, "medium"
 
-    # ── 8. Clearly practical local EXT. ───────────────────────────────────────
+    # 12. Practical local EXT.
     if is_ext:
         if _kw_match(_PRACTICAL_EXT, loc_up) or _kw_match(_ENVIRONMENTAL_EXT, loc_up):
-            return R_ON_LOCATION, "medium"
-        return R_ON_LOCATION, "low"
+            return R_LOCATION, "medium"
+        return R_LOCATION, "low"
 
-    # ── 9. Generic INT. — context-dependent ───────────────────────────────────
+    # 13. Generic INT.
     return R_EITHER, "low"
 
 
 # ── Learning from user edits ──────────────────────────────────────────────────
 
 def learn_from_edits(rows: list[dict], rules: dict | None = None) -> dict:
-    """
-    Update learned rules from a list of edited breakdown rows.
-    Each row must have: 'Location', 'INT/EXT', 'Approach'
-
-    Majority-vote: a new recommendation wins once its count exceeds the stored one.
-    """
     if rules is None:
         rules = load_rules()
 

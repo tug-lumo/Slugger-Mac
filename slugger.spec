@@ -16,6 +16,8 @@ datas += [
     ('exporter.py',                                  '.'),
     ('project_state.py',                             '.'),
     ('data/vp_rules.json',                           'data'),
+    ('data/approaches.json',                         'data'),
+    ('approach_config.py',                           '.'),
     ('.streamlit/config.toml',                       '.streamlit'),
     ('Lumostage_Emblem_RGB.png',                     '.'),
     ('Lumostage_Primary_FullColour_RGB--whitetext.png', '.'),

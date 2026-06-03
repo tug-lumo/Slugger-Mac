@@ -99,6 +99,7 @@ class Scene:
     vfx_notes: str = ""
     production_notes: str = ""
     manually_added: bool = False
+    volume_solutions: dict = field(default_factory=dict)
 
 
 def _is_screenplay_font(fontname: str) -> bool:
