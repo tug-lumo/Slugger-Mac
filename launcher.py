@@ -10,6 +10,15 @@ import time
 import webbrowser
 from pathlib import Path
 
+# Explicit imports so PyInstaller's analysis compiles these into the archive.
+# Without this, they'd only exist as raw .py data files and can silently fail
+# to import inside the frozen .app on some macOS configurations.
+import approach_config    # noqa: F401
+import screenplay_parser  # noqa: F401
+import vp_heuristics      # noqa: F401
+import exporter           # noqa: F401
+import project_state      # noqa: F401
+
 
 def _resource(relative: str) -> str:
     if getattr(sys, 'frozen', False):
@@ -18,7 +27,7 @@ def _resource(relative: str) -> str:
 
 
 def _open_browser():
-    time.sleep(3)
+    time.sleep(5)
     webbrowser.open("http://localhost:8501")
 
 

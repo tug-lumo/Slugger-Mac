@@ -9,23 +9,21 @@ for pkg in ('streamlit', 'fitz', 'altair', 'pandas', 'openpyxl'):
     d, b, h = collect_all(pkg)
     datas += d; binaries += b; hiddenimports += h
 
+# app.py must stay as a data file — Streamlit runs it as a script, not a module.
+# All other local .py files are imported by launcher.py above, so PyInstaller
+# compiles them into the archive automatically (no datas entry needed).
 datas += [
-    ('app.py',                                       '.'),
-    ('screenplay_parser.py',                         '.'),
-    ('vp_heuristics.py',                             '.'),
-    ('exporter.py',                                  '.'),
-    ('project_state.py',                             '.'),
-    ('data/vp_rules.json',                           'data'),
-    ('data/approaches.json',                         'data'),
-    ('approach_config.py',                           '.'),
-    ('.streamlit/config.toml',                       '.streamlit'),
-    ('Lumostage_Emblem_RGB.png',                     '.'),
-    ('Lumostage_Primary_FullColour_RGB--whitetext.png', '.'),
+    ('app.py',                                           '.'),
+    ('data/vp_rules.json',                               'data'),
+    ('data/approaches.json',                             'data'),
+    ('.streamlit/config.toml',                           '.streamlit'),
+    ('Lumostage_Emblem_RGB.png',                         '.'),
+    ('Lumostage_Primary_FullColour_RGB--whitetext.png',  '.'),
 ]
 
 a = Analysis(
     ['launcher.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
