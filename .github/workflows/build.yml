@@ -26,8 +26,8 @@ jobs:
       - name: Build .app
         run: pyinstaller slugger.spec
 
-      - name: Zip .app
-        run: cd dist && zip -r ../Slugger.zip Slugger.app
+      - name: Package .app
+        run: ditto -c -k --sequesterRsrc --keepParent dist/Slugger.app Slugger.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
