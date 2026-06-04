@@ -713,6 +713,15 @@ with tab_reader:
             unsafe_allow_html=True,
         )
 
+        # ── Production Notes ──────────────────────────────────────────────────
+        notes_key = f"_notes_{scene_idx}"
+        if notes_key not in st.session_state:
+            st.session_state[notes_key] = scene.production_notes
+        scene.production_notes = st.text_area(
+            "Production Notes", key=notes_key, height=100,
+            placeholder="Set build, scheduling, location scouting…",
+        )
+
         # ── Volume solutions ──────────────────────────────────────────────────
         _ac_live = st.session_state["approach_config"]
         _sols    = get_solutions(_ac_live)
@@ -746,21 +755,13 @@ with tab_reader:
             for _s in _sols:
                 scene.volume_solutions[_s] = _s in _selected
 
-        # ── Notes ─────────────────────────────────────────────────────────────
+        # ── VFX Notes ─────────────────────────────────────────────────────────
         vfx_key = f"_vfx_{scene_idx}"
         if vfx_key not in st.session_state:
             st.session_state[vfx_key] = scene.vfx_notes
         scene.vfx_notes = st.text_area(
             "VFX Notes", key=vfx_key, height=80,
             placeholder="VFX requirements, asset notes…",
-        )
-
-        notes_key = f"_notes_{scene_idx}"
-        if notes_key not in st.session_state:
-            st.session_state[notes_key] = scene.production_notes
-        scene.production_notes = st.text_area(
-            "Production Notes", key=notes_key, height=100,
-            placeholder="Set build, scheduling, location scouting…",
         )
 
         st.divider()
