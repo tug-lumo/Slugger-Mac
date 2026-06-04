@@ -760,52 +760,68 @@ with tab_reader:
     n_scenes = len(scenes)
 
     # Keyboard shortcuts: ←/→ page, ↑/↓ scene
-    components.html("""
+    _zoom_pct = st.session_state.get("reader_zoom_pct", 100)
+    components.html(f"""
 <script>
-(function() {
+(function() {{
     var doc = window.parent.document;
-    function click(text) {
+    function click(text) {{
         var btns = doc.querySelectorAll('button');
-        for (var i = 0; i < btns.length; i++) {
-            if (btns[i].innerText.trim() === text) { btns[i].click(); return; }
-        }
-    }
-    function onKey(e) {
+        for (var i = 0; i < btns.length; i++) {{
+            if (btns[i].innerText.trim() === text) {{ btns[i].click(); return; }}
+        }}
+    }}
+    function onKey(e) {{
         var el = doc.activeElement;
         var tag = el ? el.tagName.toLowerCase() : '';
         var role = el ? (el.getAttribute('role') || '') : '';
         if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
         if (role === 'listbox' || role === 'option' || role === 'combobox') return;
         if (el && el.closest && el.closest('[data-baseweb="select"]')) return;
-        switch (e.key) {
+        switch (e.key) {{
             case 'ArrowLeft':  e.preventDefault(); click('◀'); break;
             case 'ArrowRight': e.preventDefault(); click('▶'); break;
             case 'ArrowUp':    e.preventDefault(); click('◀ Prev'); break;
             case 'ArrowDown':  e.preventDefault(); click('Next ▶'); break;
-        }
-    }
-    if (window.parent._sluggerKey) {
+        }}
+    }}
+    if (window.parent._sluggerKey) {{
         doc.removeEventListener('keydown', window.parent._sluggerKey);
-    }
+    }}
     window.parent._sluggerKey = onKey;
     doc.addEventListener('keydown', onKey);
 
-    // Dynamic PDF container height — measures actual top position so it works on
-    // any screen size / browser zoom without a hardcoded pixel offset.
-    function _setH() {
-        var c = doc.querySelector('.reader-pdf-container');
-        if (!c) { setTimeout(_setH, 120); return; }
+    // Viewport-fit: target st.image element or fallback placeholder div.
+    // Zoom is applied as img width % so the image can scroll within the container.
+    function _setH() {{
+        var c = doc.querySelector('[data-testid="stImage"]')
+               || doc.querySelector('.reader-pdf-container');
+        if (!c) {{ setTimeout(_setH, 120); return; }}
         var top = c.getBoundingClientRect().top;
         var h = Math.max(400, window.parent.innerHeight - top - 10);
         c.style.height = h + 'px';
-    }
-    if (window.parent._sluggerResize) {
+        c.style.overflow = 'auto';
+        c.style.background = '#0D1214';
+        c.style.borderRadius = '6px';
+        c.style.border = '1px solid rgba(0,96,254,0.08)';
+        c.style.textAlign = 'center';
+        var img = c.querySelector('img');
+        if (img) {{
+            img.style.setProperty('width', '{_zoom_pct}%', 'important');
+            img.style.setProperty('max-width', 'none', 'important');
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            img.style.margin = '0 auto';
+            img.style.borderRadius = '2px';
+        }}
+    }}
+    if (window.parent._sluggerResize) {{
         window.parent.removeEventListener('resize', window.parent._sluggerResize);
-    }
+    }}
     window.parent._sluggerResize = _setH;
     window.parent.addEventListener('resize', _setH);
     _setH();
-})();
+}})();
 </script>
 """, height=0)
 
@@ -818,7 +834,6 @@ with tab_reader:
     col_pdf, col_notes = st.columns([3, 2], gap="small")
 
     with col_pdf:
-        _zoom_pct = st.session_state.get("reader_zoom_pct", 100)
         if getattr(scene, "manually_added", False):
             st.markdown(
                 "<div class='reader-pdf-container' style='display:flex;align-items:center;"
@@ -829,14 +844,8 @@ with tab_reader:
             )
         elif pdf_bytes:
             with st.spinner("Rendering…"):
-                png = render_page(pdf_bytes, page_idx, zoom=2.5)
-            _b64 = base64.b64encode(png).decode()
-            st.markdown(
-                f"<div class='reader-pdf-container'>"
-                f"<img src='data:image/png;base64,{_b64}' style='height:{_zoom_pct}%'>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+                png = render_page(pdf_bytes, page_idx)
+            st.image(png, use_container_width=True)
         else:
             st.markdown(
                 "<div class='reader-pdf-container' style='display:flex;align-items:center;"
