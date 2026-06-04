@@ -460,7 +460,7 @@ if uploaded and st.session_state.last_uploaded != uploaded.name:
     ])
 
     for key in list(st.session_state.keys()):
-        if key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_", "_prev_approach_")):
+        if key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_ms_", "_prev_approach_")):
             del st.session_state[key]
 
     saved = load_project(title_stem)
@@ -507,7 +507,7 @@ if "_pending_restore" in st.session_state:
             st.session_state.project_rules = saved_data.get("project_rules", [])
             st.session_state.custom_labels = saved_data.get("custom_labels", [])
             for key in list(st.session_state.keys()):
-                if key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_", "_prev_approach_")):
+                if key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_ms_", "_prev_approach_")):
                     del st.session_state[key]
             del st.session_state["_pending_restore"]
             st.success(f"Restored {n} scenes.")
@@ -718,31 +718,33 @@ with tab_reader:
         _sols    = get_solutions(_ac_live)
 
         if _sols and new_rec:
-            # Reset solutions when approach changes
+            _ms_key = f"_sol_ms_{scene_idx}"
+
+            # Reset when approach changes
             if st.session_state.get(prev_approach_key) is not None \
                     and st.session_state.get(prev_approach_key) != new_rec:
                 scene.volume_solutions = {}
-                for _s in _sols:
-                    st.session_state.pop(f"_sol_{scene_idx}_{_sk(_s)}", None)
+                st.session_state.pop(_ms_key, None)
             st.session_state[prev_approach_key] = new_rec
 
             # Populate from defaults if empty
             if not scene.volume_solutions:
                 scene.volume_solutions = default_solutions_for(_ac_live, new_rec)
 
-            st.markdown("<div class='vol-sol-label'>Volume Solution</div>", unsafe_allow_html=True)
-            sol_cols = st.columns(len(_sols))
-            for _ci, _s in enumerate(_sols):
-                _skey = f"_sol_{scene_idx}_{_sk(_s)}"
-                if _skey not in st.session_state:
-                    st.session_state[_skey] = scene.volume_solutions.get(_s, False)
-                with sol_cols[_ci]:
-                    _val = st.checkbox(
-                        _SOL_ABBREV.get(_s, _s[:7]),
-                        key=_skey,
-                        help=_s,
-                    )
-                    scene.volume_solutions[_s] = _val
+            # Seed widget from scene state on first render
+            if _ms_key not in st.session_state:
+                st.session_state[_ms_key] = [s for s in _sols if scene.volume_solutions.get(s, False)]
+
+            st.markdown("<div class='vol-sol-label'>Volume Solutions</div>", unsafe_allow_html=True)
+            _selected = st.multiselect(
+                "Volume Solutions",
+                options=_sols,
+                key=_ms_key,
+                label_visibility="collapsed",
+                placeholder="None selected",
+            )
+            for _s in _sols:
+                scene.volume_solutions[_s] = _s in _selected
 
         # ── Notes ─────────────────────────────────────────────────────────────
         vfx_key = f"_vfx_{scene_idx}"
@@ -1083,7 +1085,7 @@ with tab_options:
                 if st.button("Apply Import", type="primary", key="btn_apply_xlsx_import"):
                     _n = apply_excel_import(scenes, _import_data, _valid_opts)
                     for _key in list(st.session_state.keys()):
-                        if _key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_", "_prev_approach_")):
+                        if _key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_ms_", "_prev_approach_")):
                             del st.session_state[_key]
                     st.session_state.pop("_xlsx_sig", None)
                     st.success(f"Imported — {_n} scene(s) updated.")
