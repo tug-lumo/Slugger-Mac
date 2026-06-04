@@ -15,6 +15,7 @@ from pathlib import Path
 import fitz  # pymupdf — for page rendering
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from approach_config import (
     load_config, save_config,
@@ -43,6 +44,9 @@ from project_state import (
     apply_save_to_scenes,
     apply_project_rules,
     _insert_scene_sorted,
+    save_pdf,
+    has_pdf,
+    load_pdf_bytes,
 )
 
 # ── Logo assets ───────────────────────────────────────────────────────────────
@@ -221,6 +225,7 @@ def _init_state():
         "reader_page_idx":  0,
         "project_rules":    [],
         "custom_labels":    [],
+        "_scene_pinned":    False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -263,6 +268,17 @@ def _scene_gaps(scenes: list) -> list[int]:
         if nums[i + 1] - nums[i] > 1:
             gaps.extend(range(nums[i] + 1, nums[i + 1]))
     return gaps
+
+
+def _scene_for_page(scenes: list, page_idx: int) -> int:
+    """Return the index of the last non-manual scene whose page_start <= page_idx."""
+    best = 0
+    for i, s in enumerate(scenes):
+        if getattr(s, 'manually_added', False):
+            continue
+        if int(getattr(s, 'page_start', 0)) <= page_idx:
+            best = i
+    return best
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -426,7 +442,8 @@ if uploaded and st.session_state.last_uploaded != uploaded.name:
     st.session_state.script_title = title_stem
     st.session_state.pdf_bytes = uploaded.getvalue()
 
-    for k in ("scene_jump_select", "_prev_scene_idx", "reader_page_idx",
+    for k in ("scene_jump_select", "reader_page_idx",
+              "_rdr_prev_scene", "_rdr_prev_page", "_scene_pinned",
               "_xlsx_sig", "_last_save_sig"):
         st.session_state.pop(k, None)
 
@@ -473,9 +490,70 @@ if uploaded and st.session_state.last_uploaded != uploaded.name:
         if key.startswith(("_rec_", "_vfx_", "_notes_", "_sol_ms_", "_prev_approach_")):
             del st.session_state[key]
 
+    save_pdf(title_stem, uploaded.getvalue())
+
     saved = load_project(title_stem)
     if saved:
         st.session_state["_pending_restore"] = saved
+
+
+# ── Open recent ───────────────────────────────────────────────────────────────
+
+if st.session_state.get("_open_recent"):
+    _recent_title = st.session_state.pop("_open_recent")
+    _recent_pdf   = load_pdf_bytes(_recent_title)
+    _recent_saved = load_project(_recent_title)
+    if _recent_pdf and _recent_saved:
+        with st.spinner(f"Loading {_recent_title}…"):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as _f:
+                _f.write(_recent_pdf)
+                _tmp = _f.name
+            try:
+                _r_scenes, _r_total = parse_screenplay(_tmp)
+            finally:
+                try:
+                    os.unlink(_tmp)
+                except OSError:
+                    pass
+        _r_rules = st.session_state.rules
+        for _sc in _r_scenes:
+            _sc.recommendation, _sc.confidence = recommend_vp(
+                _sc.int_ext, _sc.location, _sc.time_of_day, _r_rules)
+        apply_save_to_scenes(_r_scenes, _recent_saved)
+        st.session_state.update({
+            "script_title":  _recent_title,
+            "pdf_bytes":     _recent_pdf,
+            "total_pages":   _r_total,
+            "scenes":        _r_scenes,
+            "project_rules": _recent_saved.get("project_rules", []),
+            "custom_labels": _recent_saved.get("custom_labels", []),
+            "last_uploaded": "",
+            "df": pd.DataFrame([
+                {
+                    "Sc #":             _sc.number or str(_i + 1),
+                    "Slug Line":        _sc.raw_slug,
+                    "INT/EXT":          _sc.int_ext,
+                    "Location":         _sc.location,
+                    "Time":             _sc.time_of_day,
+                    "Pages":            _sc.page_count_str,
+                    "Approach":         _sc.recommendation,
+                    "Confidence":       _sc.confidence,
+                    "VFX Notes":        "",
+                    "Production Notes": "",
+                }
+                for _i, _sc in enumerate(_r_scenes)
+            ]),
+        })
+        for _k in list(st.session_state.keys()):
+            if _k.startswith(("_rec_", "_vfx_", "_notes_", "_sol_ms_", "_prev_approach_",
+                               "_xlsx_sig", "_last_save_sig")):
+                st.session_state.pop(_k, None)
+        for _k in ("scene_jump_select", "reader_page_idx",
+                   "_rdr_prev_scene", "_rdr_prev_page", "_scene_pinned"):
+            st.session_state.pop(_k, None)
+        st.rerun()
+    else:
+        st.error(f"Could not reopen **{_recent_title}** — PDF not cached. Upload it manually.")
 
 
 # ── Guard: no script loaded ───────────────────────────────────────────────────
@@ -487,15 +565,62 @@ if st.session_state.df is None:
         "<div style='font-size:0.8rem;color:#8ABAC8;letter-spacing:0.12em'>LUMOSTAGE</div>"
     )
     st.markdown(
-        f"<div style='max-width:480px;padding:40px 0 20px 0'>"
+        f"<div style='max-width:560px;padding:40px 0 20px 0'>"
         f"{_primary_tag}"
         f"<div class='slugger-word' style='margin:12px 0 6px 0'>"
         f"<span class='ball'>⚾</span>SLUGGER</div>"
-        f"<div style='font-size:0.9rem;color:#8ABAC8;font-style:italic;margin-bottom:24px'>"
+        f"<div style='font-size:0.9rem;color:#8ABAC8;font-style:italic;margin-bottom:28px'>"
         f"Taking the mental out of breakdowns</div>"
-        f"<div style='font-size:0.85rem;color:#C8D8E0'>"
-        f"Upload a PDF screenplay in the sidebar to begin. &nbsp;🧢</div>"
         f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    _recent_saves = list_saves()
+    if _recent_saves:
+        st.markdown(
+            "<div style='font-size:0.65rem;color:#0060FE;text-transform:uppercase;"
+            "letter-spacing:0.12em;margin-bottom:10px;border-bottom:1px solid #0060FE25;"
+            "padding-bottom:4px'>Recent Projects</div>",
+            unsafe_allow_html=True,
+        )
+        for _rp in _recent_saves[:8]:
+            _rp_title    = _rp.stem
+            _rp_mtime    = datetime.fromtimestamp(_rp.stat().st_mtime).strftime("%d %b %Y  %H:%M")
+            _rp_data     = load_project(_rp_title)
+            _rp_scenes   = (len(_rp_data.get("scenes", {})) +
+                            len(_rp_data.get("manually_added_scenes", []))) if _rp_data else 0
+            _rp_saved_at = _rp_data.get("saved_at", "")[:10] if _rp_data else ""
+            _rp_has_pdf  = has_pdf(_rp_title)
+            _rp_display  = _rp_title.replace("_", " ").replace("-", " ")
+
+            _col_info, _col_btn = st.columns([5, 1])
+            with _col_info:
+                _pdf_badge = (
+                    "<span style='color:#00EFEA;font-size:0.65rem'>PDF cached</span>"
+                    if _rp_has_pdf else
+                    "<span style='color:#555;font-size:0.65rem'>upload PDF to reopen</span>"
+                )
+                st.markdown(
+                    f"<div style='padding:8px 0 4px 0;border-bottom:1px solid #0060FE15'>"
+                    f"<span style='font-size:0.9rem;font-weight:600;color:#F2F2F2'>{_rp_display[:48]}</span>"
+                    f"&nbsp;&nbsp;<span style='font-size:0.72rem;color:#8ABAC8'>"
+                    f"{_rp_scenes} scenes &nbsp;·&nbsp; {_rp_mtime}</span>"
+                    f"&nbsp;&nbsp;{_pdf_badge}</div>",
+                    unsafe_allow_html=True,
+                )
+            with _col_btn:
+                st.markdown("<div style='padding-top:6px'>", unsafe_allow_html=True)
+                if st.button("Open ▶", key=f"_open_recent_{_rp_title}",
+                             disabled=not _rp_has_pdf, use_container_width=True):
+                    st.session_state["_open_recent"] = _rp_title
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:24px'></div>", unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='font-size:0.85rem;color:#C8D8E0'>"
+        "Upload a PDF screenplay in the sidebar to begin. &nbsp;🧢</div>",
         unsafe_allow_html=True,
     )
     st.stop()
@@ -622,12 +747,69 @@ with tab_reader:
 
     n_scenes = len(scenes)
 
+    # Keyboard shortcuts: ←/→ page, ↑/↓ scene
+    components.html("""
+<script>
+(function() {
+    var doc = window.parent.document;
+    function click(text) {
+        var btns = doc.querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) {
+            if (btns[i].innerText.trim() === text) { btns[i].click(); return; }
+        }
+    }
+    function onKey(e) {
+        var el = doc.activeElement;
+        var tag = el ? el.tagName.toLowerCase() : '';
+        var role = el ? (el.getAttribute('role') || '') : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+        if (role === 'listbox' || role === 'option' || role === 'combobox') return;
+        if (el && el.closest && el.closest('[data-baseweb="select"]')) return;
+        switch (e.key) {
+            case 'ArrowLeft':  e.preventDefault(); click('◀'); break;
+            case 'ArrowRight': e.preventDefault(); click('▶'); break;
+            case 'ArrowUp':    e.preventDefault(); click('◀ Prev'); break;
+            case 'ArrowDown':  e.preventDefault(); click('Next ▶'); break;
+        }
+    }
+    if (window.parent._sluggerKey) {
+        doc.removeEventListener('keydown', window.parent._sluggerKey);
+    }
+    window.parent._sluggerKey = onKey;
+    doc.addEventListener('keydown', onKey);
+})();
+</script>
+""", height=0)
+
     if "scene_jump_select" not in st.session_state:
         st.session_state["scene_jump_select"] = 0
     if "reader_page_idx" not in st.session_state:
         st.session_state["reader_page_idx"] = 0
-    if "_prev_scene_idx" not in st.session_state:
-        st.session_state["_prev_scene_idx"] = 0
+
+    # ── Bidirectional scene ↔ page sync (before any widget renders) ───────────
+    _rdr_this_scene = st.session_state["scene_jump_select"]
+    _rdr_prev_scene = st.session_state.get("_rdr_prev_scene", _rdr_this_scene)
+    _rdr_prev_page  = st.session_state.get("_rdr_prev_page",  st.session_state["reader_page_idx"])
+
+    if _rdr_this_scene != _rdr_prev_scene:
+        # Scene was navigated — pull page to the scene's start
+        _sc_target = scenes[_rdr_this_scene]
+        if not getattr(_sc_target, "manually_added", False):
+            st.session_state["reader_page_idx"] = int(_sc_target.page_start)
+    elif st.session_state["reader_page_idx"] != _rdr_prev_page \
+            and not st.session_state.get("_scene_pinned"):
+        # Page was navigated independently — sync scene to wherever we've read to
+        _inferred = _scene_for_page(
+            scenes, max(0, min(st.session_state["reader_page_idx"], total_pages - 1))
+        )
+        st.session_state["scene_jump_select"] = _inferred  # safe — widget not yet rendered
+        _rdr_this_scene = _inferred
+
+    scene_idx = _rdr_this_scene
+    scene     = scenes[scene_idx]
+    page_idx  = max(0, min(st.session_state["reader_page_idx"], total_pages - 1))
+    st.session_state["_rdr_prev_scene"] = scene_idx
+    st.session_state["_rdr_prev_page"]  = page_idx
 
     nav_prev, nav_select, nav_next = st.columns([1, 5, 1])
     with nav_prev:
@@ -645,16 +827,6 @@ with tab_reader:
             format_func=lambda i: scene_labels[i],
             key="scene_jump_select", label_visibility="collapsed",
         )
-
-    scene_idx = st.session_state["scene_jump_select"]
-    scene     = scenes[scene_idx]
-
-    if scene_idx != st.session_state["_prev_scene_idx"]:
-        if not getattr(scene, "manually_added", False):
-            st.session_state["reader_page_idx"] = int(scene.page_start)
-        st.session_state["_prev_scene_idx"] = scene_idx
-
-    page_idx = max(0, min(st.session_state["reader_page_idx"], total_pages - 1))
 
     st.divider()
     col_pdf, col_notes = st.columns([6, 4], gap="medium")
@@ -686,14 +858,27 @@ with tab_reader:
             )
 
     with col_notes:
-        st.markdown(
-            f"<p style='color:#888;font-size:0.8rem;margin-bottom:4px'>"
-            f"Scene {scene_idx + 1} of {n_scenes}"
-            + ("&nbsp;·&nbsp;<span style='color:#f57c00'>manually added</span>"
-               if getattr(scene, "manually_added", False) else "")
-            + "</p>",
-            unsafe_allow_html=True,
-        )
+        _meta_col, _pin_col = st.columns([5, 1])
+        with _meta_col:
+            st.markdown(
+                f"<p style='color:#888;font-size:0.8rem;margin-bottom:4px'>"
+                f"Scene {scene_idx + 1} of {n_scenes}"
+                + ("&nbsp;·&nbsp;<span style='color:#f57c00'>manually added</span>"
+                   if getattr(scene, "manually_added", False) else "")
+                + "</p>",
+                unsafe_allow_html=True,
+            )
+        with _pin_col:
+            _pinned = st.session_state.get("_scene_pinned", False)
+            if st.button(
+                "📌" if _pinned else "📍",
+                key="btn_pin_scene",
+                help="Unpin — page navigation will sync this panel to the current page" if _pinned
+                     else "Pin scene — read ahead without the panel following",
+                use_container_width=True,
+            ):
+                st.session_state["_scene_pinned"] = not _pinned
+                st.rerun()
         st.markdown(f"<div class='scene-slug'>{scene.raw_slug}</div>", unsafe_allow_html=True)
         st.markdown(
             f"<p class='scene-meta'>{scene.int_ext} &nbsp;·&nbsp; "

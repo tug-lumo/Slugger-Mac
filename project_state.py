@@ -25,6 +25,24 @@ def _saves_base() -> Path:
 
 
 SAVES_DIR = _saves_base() / "saves"
+PDFS_DIR  = _saves_base() / "pdfs"
+
+
+def save_pdf(title: str, pdf_bytes: bytes) -> None:
+    PDFS_DIR.mkdir(exist_ok=True)
+    (PDFS_DIR / f"{_safe(title)}.pdf").write_bytes(pdf_bytes)
+
+
+def has_pdf(title: str) -> bool:
+    return (PDFS_DIR / f"{_safe(title)}.pdf").exists()
+
+
+def load_pdf_bytes(title: str) -> bytes | None:
+    p = PDFS_DIR / f"{_safe(title)}.pdf"
+    try:
+        return p.read_bytes() if p.exists() else None
+    except OSError:
+        return None
 
 
 def _safe(title: str) -> str:

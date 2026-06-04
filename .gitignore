@@ -7,8 +7,9 @@ build/
 *.app
 .DS_Store
 
-# Per-project breakdown saves — local to each machine, not shared
+# Per-project breakdown saves and cached PDFs — local to each machine, not shared
 saves/
+pdfs/
 
 # data/ files ARE tracked:
 #   data/approaches.json — approach config (should sync across machines)
