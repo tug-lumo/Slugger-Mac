@@ -17,4 +17,4 @@ echo   Press Ctrl+C to stop the server.
 echo ================================================================
 echo.
 
-venv\Scripts\streamlit run app.py --server.headless false --browser.gatherUsageStats false
+venv\Scripts\streamlit run app.py --server.address=0.0.0.0 --server.headless false --browser.gatherUsageStats false
