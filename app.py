@@ -95,7 +95,8 @@ st.markdown("""
         font-style: italic; margin-top: 1px;
     }
     #MainMenu { visibility: hidden; }
-    header[data-testid="stHeader"] { display: none; }
+    header[data-testid="stHeader"] { visibility: hidden; height: 0; min-height: 0; padding: 0; }
+    [data-testid="collapsedControl"] { visibility: visible !important; }
     [data-testid="stToolbar"] { display: none; }
     .block-container { padding-top: 0.75rem; }
     [data-testid="stSidebar"] {
