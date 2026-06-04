@@ -95,20 +95,22 @@ st.markdown("""
         font-style: italic; margin-top: 1px;
     }
     #MainMenu { visibility: hidden; }
-    header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important; overflow: visible !important; }
+    header[data-testid="stHeader"] { display: none; }
     [data-testid="stToolbar"] { display: none; }
-    [data-testid="collapsedControl"] {
+    .block-container { padding-top: 0.75rem; }
+    /* Force sidebar always visible — block collapse entirely */
+    [data-testid="stSidebar"] {
+        transform: none !important;
         display: flex !important;
         visibility: visible !important;
-        position: fixed !important;
-        top: 0.4rem !important;
-        left: 0.4rem !important;
-        z-index: 99999 !important;
+        margin-left: 0 !important;
+        border-right: 1px solid #00EFEA22;
+        background: #0E1416;
     }
-    .block-container { padding-top: 0.75rem; }
-    [data-testid="stSidebar"] {
-        border-right: 1px solid #00EFEA22; background: #0E1416;
-    }
+    /* Hide both the collapse button (inside sidebar) and the expand arrow (outside) */
+    [data-testid="collapsedControl"] { display: none !important; }
+    [data-testid="stSidebarCollapseButton"] { display: none !important; }
+    [data-testid="stSidebar"] button[kind="header"] { display: none !important; }
     [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { font-size: 0.82rem; }
     .stTabs [data-baseweb="tab-list"] {
         gap: 0px; border-bottom: 2px solid #0060FE35; padding: 0 4px;
