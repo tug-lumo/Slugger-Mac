@@ -61,7 +61,7 @@ _PRIMARY_URI = _b64_img(_LOGO_DIR / "Lumostage_Primary_FullColour_RGB--whitetext
 
 st.set_page_config(
     page_title="Slugger — VP Breakdown",
-    page_icon="🎬",
+    page_icon="⚾",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -83,7 +83,7 @@ st.markdown("""
         text-shadow: 3px 3px 0px #0060FE, 0 0 18px #00EFEA55;
         font-style: italic;
     }
-    .slugger-word .glove { font-style: normal; margin-right: 4px; }
+    .slugger-word .ball { font-style: normal; margin-right: 4px; }
     .slugger-word-sm {
         font-size: 1.35rem; font-weight: 900; letter-spacing: 0.1em;
         color: #F2F2F2;
@@ -269,8 +269,8 @@ with st.sidebar:
         f"<div style='display:flex;align-items:center;gap:10px;margin-bottom:4px'>"
         f"{_emblem_tag}"
         f"<div>"
-        f"<div class='slugger-word-sm'><span class='glove'>🥊</span>SLUGGER</div>"
-        f"<div class='slugger-tagline'>Taking the mental out of breakdowns</div>"
+        f"<div class='slugger-word-sm'><span class='ball'>⚾</span>SLUGGER</div>"
+        f"<div class='slugger-tagline'>Taking the mental out of breakdowns &nbsp;🧢</div>"
         f"</div></div></div>",
         unsafe_allow_html=True,
     )
@@ -389,7 +389,7 @@ with st.sidebar:
     stats = rule_stats(st.session_state.rules)
     _rules_total = stats["total"]
     st.markdown(
-        f"<div class='sb-section-title'>Learned rules &nbsp;"
+        f"<div class='sb-section-title'>⚾ Learned rules &nbsp;"
         f"<span style='color:#F2F2F2;font-weight:700'>{_rules_total}</span></div>",
         unsafe_allow_html=True,
     )
@@ -480,11 +480,11 @@ if st.session_state.df is None:
         f"<div style='max-width:480px;padding:40px 0 20px 0'>"
         f"{_primary_tag}"
         f"<div class='slugger-word' style='margin:12px 0 6px 0'>"
-        f"<span class='glove'>🥊</span>SLUGGER</div>"
+        f"<span class='ball'>⚾</span>SLUGGER</div>"
         f"<div style='font-size:0.9rem;color:#8ABAC8;font-style:italic;margin-bottom:24px'>"
         f"Taking the mental out of breakdowns</div>"
         f"<div style='font-size:0.85rem;color:#C8D8E0'>"
-        f"Upload a PDF screenplay in the sidebar to begin.</div>"
+        f"Upload a PDF screenplay in the sidebar to begin. &nbsp;🧢</div>"
         f"</div>",
         unsafe_allow_html=True,
     )
