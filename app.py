@@ -192,6 +192,19 @@ st.markdown("""
     .vol-sol-label { font-size: 0.68rem; color: #8ABAC8; text-transform: uppercase; letter-spacing: 0.08em; margin: 10px 0 2px 0; }
     [data-testid="stMetricLabel"] { color: #8ABAC8 !important; }
     [data-testid="stMetricValue"] { color: #F2F2F2 !important; }
+    .reader-pdf-container {
+        overflow: auto;
+        text-align: center;
+        background: #0D1214;
+        border-radius: 6px;
+        border: 1px solid #0060FE15;
+    }
+    .reader-pdf-container img {
+        display: inline-block;
+        width: auto;
+        max-width: none;
+        border-radius: 2px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -226,6 +239,7 @@ def _init_state():
         "project_rules":    [],
         "custom_labels":    [],
         "_scene_pinned":    False,
+        "reader_zoom_pct":  100,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -777,6 +791,22 @@ with tab_reader:
     }
     window.parent._sluggerKey = onKey;
     doc.addEventListener('keydown', onKey);
+
+    // Dynamic PDF container height — measures actual top position so it works on
+    // any screen size / browser zoom without a hardcoded pixel offset.
+    function _setH() {
+        var c = doc.querySelector('.reader-pdf-container');
+        if (!c) { setTimeout(_setH, 120); return; }
+        var top = c.getBoundingClientRect().top;
+        var h = Math.max(400, window.parent.innerHeight - top - 10);
+        c.style.height = h + 'px';
+    }
+    if (window.parent._sluggerResize) {
+        window.parent.removeEventListener('resize', window.parent._sluggerResize);
+    }
+    window.parent._sluggerResize = _setH;
+    window.parent.addEventListener('resize', _setH);
+    _setH();
 })();
 </script>
 """, height=0)
@@ -811,53 +841,86 @@ with tab_reader:
     st.session_state["_rdr_prev_scene"] = scene_idx
     st.session_state["_rdr_prev_page"]  = page_idx
 
-    nav_prev, nav_select, nav_next = st.columns([1, 5, 1])
-    with nav_prev:
-        if st.button("◀ Prev", use_container_width=True, key="btn_prev_scene"):
-            if st.session_state["scene_jump_select"] > 0:
-                st.session_state["scene_jump_select"] -= 1
-    with nav_next:
-        if st.button("Next ▶", use_container_width=True, key="btn_next_scene"):
-            if st.session_state["scene_jump_select"] < n_scenes - 1:
-                st.session_state["scene_jump_select"] += 1
-    with nav_select:
-        scene_labels = [f"Sc {s.number}  —  {s.raw_slug[:60]}" for s in scenes]
-        st.selectbox(
-            "Jump to scene", options=range(n_scenes),
-            format_func=lambda i: scene_labels[i],
-            key="scene_jump_select", label_visibility="collapsed",
-        )
-
-    st.divider()
-    col_pdf, col_notes = st.columns([6, 4], gap="medium")
+    col_pdf, col_notes = st.columns([3, 2], gap="small")
 
     with col_pdf:
+        _zoom_pct = st.session_state.get("reader_zoom_pct", 100)
         if getattr(scene, "manually_added", False):
-            st.info("This scene was added manually — no PDF page position is known.")
+            st.markdown(
+                "<div class='reader-pdf-container' style='display:flex;align-items:center;"
+                "justify-content:center'>"
+                "<p style='color:#8ABAC8;font-size:0.9rem;padding:24px'>"
+                "Manually added scene — no PDF position known.</p></div>",
+                unsafe_allow_html=True,
+            )
         elif pdf_bytes:
-            with st.spinner("Rendering page…"):
-                png = render_page(pdf_bytes, page_idx)
-            st.image(png, use_container_width=True)
+            with st.spinner("Rendering…"):
+                png = render_page(pdf_bytes, page_idx, zoom=2.5)
+            _b64 = base64.b64encode(png).decode()
+            st.markdown(
+                f"<div class='reader-pdf-container'>"
+                f"<img src='data:image/png;base64,{_b64}' style='height:{_zoom_pct}%'>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
         else:
-            st.info("PDF not available for rendering.")
+            st.markdown(
+                "<div class='reader-pdf-container' style='display:flex;align-items:center;"
+                "justify-content:center'>"
+                "<p style='color:#8ABAC8;font-size:0.9rem;padding:24px'>"
+                "PDF not available for rendering.</p></div>",
+                unsafe_allow_html=True,
+            )
 
-        pg_prev, pg_label, pg_next = st.columns([1, 4, 1])
-        with pg_prev:
+        _pg1, _pg2, _pg3 = st.columns([1, 4, 1])
+        with _pg1:
             if st.button("◀", key="btn_prev_page", use_container_width=True):
                 if st.session_state["reader_page_idx"] > 0:
                     st.session_state["reader_page_idx"] -= 1
-        with pg_next:
+        with _pg3:
             if st.button("▶", key="btn_next_page", use_container_width=True):
                 if st.session_state["reader_page_idx"] < total_pages - 1:
                     st.session_state["reader_page_idx"] += 1
-        with pg_label:
+        with _pg2:
             st.markdown(
-                f"<p style='text-align:center;margin-top:6px;color:#555;font-size:0.85rem'>"
-                f"Page {page_idx + 1} of {total_pages}</p>",
+                f"<p style='text-align:center;margin-top:6px;color:#8ABAC8;font-size:0.82rem'>"
+                f"Page {page_idx + 1} / {total_pages}</p>",
+                unsafe_allow_html=True,
+            )
+        _z1, _z2, _z3 = st.columns([1, 4, 1])
+        with _z1:
+            if st.button("−", key="btn_zoom_out", use_container_width=True):
+                st.session_state["reader_zoom_pct"] = max(50, _zoom_pct - 25)
+                st.rerun()
+        with _z3:
+            if st.button("+", key="btn_zoom_in", use_container_width=True):
+                st.session_state["reader_zoom_pct"] = min(300, _zoom_pct + 25)
+                st.rerun()
+        with _z2:
+            st.markdown(
+                f"<p style='text-align:center;margin-top:6px;color:#8ABAC8;font-size:0.78rem'>"
+                f"zoom {_zoom_pct}%</p>",
                 unsafe_allow_html=True,
             )
 
     with col_notes:
+        _cn_prev, _cn_sel, _cn_next = st.columns([1, 5, 1])
+        with _cn_prev:
+            if st.button("◀ Prev", use_container_width=True, key="btn_prev_scene"):
+                if st.session_state["scene_jump_select"] > 0:
+                    st.session_state["scene_jump_select"] -= 1
+        with _cn_next:
+            if st.button("Next ▶", use_container_width=True, key="btn_next_scene"):
+                if st.session_state["scene_jump_select"] < n_scenes - 1:
+                    st.session_state["scene_jump_select"] += 1
+        with _cn_sel:
+            scene_labels = [f"Sc {s.number}  —  {s.raw_slug[:60]}" for s in scenes]
+            st.selectbox(
+                "Jump to scene", options=range(n_scenes),
+                format_func=lambda i: scene_labels[i],
+                key="scene_jump_select", label_visibility="collapsed",
+            )
+
         _meta_col, _pin_col = st.columns([5, 1])
         with _meta_col:
             st.markdown(
