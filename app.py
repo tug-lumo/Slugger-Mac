@@ -904,61 +904,59 @@ with tab_reader:
             )
 
     with col_notes:
+        # ── Scene nav — ONE unified header ────────────────────────────────────
         _cn_prev, _cn_sel, _cn_next = st.columns([1, 5, 1])
         with _cn_prev:
             if st.button("◀ Prev", use_container_width=True, key="btn_prev_scene"):
                 if st.session_state["scene_jump_select"] > 0:
                     st.session_state["scene_jump_select"] -= 1
+                    st.rerun()
         with _cn_next:
             if st.button("Next ▶", use_container_width=True, key="btn_next_scene"):
                 if st.session_state["scene_jump_select"] < n_scenes - 1:
                     st.session_state["scene_jump_select"] += 1
+                    st.rerun()
         with _cn_sel:
-            scene_labels = [f"Sc {s.number}  —  {s.raw_slug[:60]}" for s in scenes]
+            scene_labels = [f"Sc {s.number}  —  {s.raw_slug[:55]}" for s in scenes]
             st.selectbox(
                 "Jump to scene", options=range(n_scenes),
                 format_func=lambda i: scene_labels[i],
                 key="scene_jump_select", label_visibility="collapsed",
             )
 
-        _meta_col, _pin_col = st.columns([5, 1])
-        with _meta_col:
-            st.markdown(
-                f"<p style='color:#888;font-size:0.8rem;margin-bottom:4px'>"
-                f"Scene {scene_idx + 1} of {n_scenes}"
-                + ("&nbsp;·&nbsp;<span style='color:#f57c00'>manually added</span>"
-                   if getattr(scene, "manually_added", False) else "")
-                + "</p>",
-                unsafe_allow_html=True,
-            )
-        with _pin_col:
-            _pinned = st.session_state.get("_scene_pinned", False)
-            if st.button(
-                "📌" if _pinned else "📍",
-                key="btn_pin_scene",
-                help="Unpin — page navigation will sync this panel to the current page" if _pinned
-                     else "Pin scene — read ahead without the panel following",
-                use_container_width=True,
-            ):
-                st.session_state["_scene_pinned"] = not _pinned
-                st.rerun()
-        st.markdown(f"<div class='scene-slug'>{scene.raw_slug}</div>", unsafe_allow_html=True)
+        _manual_tag = ("&nbsp;·&nbsp;<span style='color:#f57c00'>manual</span>"
+                       if getattr(scene, "manually_added", False) else "")
         st.markdown(
-            f"<p class='scene-meta'>{scene.int_ext} &nbsp;·&nbsp; "
-            f"{scene.time_of_day} &nbsp;·&nbsp; {scene.page_count_str} pages</p>",
+            f"<div style='font-size:0.72rem;color:#8ABAC8;margin:-2px 0 6px 0'>"
+            f"{scene.int_ext} &nbsp;·&nbsp; {scene.time_of_day} "
+            f"&nbsp;·&nbsp; {scene.page_count_str} pg"
+            f"&nbsp;·&nbsp; {scene_idx + 1}/{n_scenes}{_manual_tag}</div>",
             unsafe_allow_html=True,
         )
 
         st.divider()
 
-        # ── Approach selector ─────────────────────────────────────────────────
-        rec_key          = f"_rec_{scene_idx}"
+        # ── Approach selector + pin ───────────────────────────────────────────
+        rec_key           = f"_rec_{scene_idx}"
         prev_approach_key = f"_prev_approach_{scene_idx}"
 
         if rec_key not in st.session_state:
             st.session_state[rec_key] = scene.recommendation
 
-        new_rec = st.selectbox("Approach", _options(), key=rec_key)
+        _rec_col, _pin_col = st.columns([5, 1])
+        with _rec_col:
+            new_rec = st.selectbox("Approach", _options(), key=rec_key)
+        with _pin_col:
+            _pinned = st.session_state.get("_scene_pinned", False)
+            if st.button(
+                "📌" if _pinned else "📍",
+                key="btn_pin_scene",
+                help="Unpin — page navigation will follow the current page" if _pinned
+                     else "Pin scene — read ahead without the panel following",
+                use_container_width=True,
+            ):
+                st.session_state["_scene_pinned"] = not _pinned
+                st.rerun()
         scene.recommendation = new_rec
 
         conf_colour = {
