@@ -456,8 +456,7 @@ if uploaded and st.session_state.last_uploaded != uploaded.name:
     st.session_state.script_title = title_stem
     st.session_state.pdf_bytes = uploaded.getvalue()
 
-    for k in ("scene_jump_select", "reader_page_idx",
-              "_rdr_prev_scene", "_rdr_prev_page", "_scene_pinned",
+    for k in ("scene_jump_select", "reader_page_idx", "_scene_pinned",
               "_xlsx_sig", "_last_save_sig"):
         st.session_state.pop(k, None)
 
@@ -562,8 +561,7 @@ if st.session_state.get("_open_recent"):
             if _k.startswith(("_rec_", "_vfx_", "_notes_", "_sol_ms_", "_prev_approach_",
                                "_xlsx_sig", "_last_save_sig")):
                 st.session_state.pop(_k, None)
-        for _k in ("scene_jump_select", "reader_page_idx",
-                   "_rdr_prev_scene", "_rdr_prev_page", "_scene_pinned"):
+        for _k in ("scene_jump_select", "reader_page_idx", "_scene_pinned"):
             st.session_state.pop(_k, None)
         st.rerun()
     else:
@@ -811,35 +809,11 @@ with tab_reader:
 </script>
 """, height=0)
 
-    if "scene_jump_select" not in st.session_state:
-        st.session_state["scene_jump_select"] = 0
-    if "reader_page_idx" not in st.session_state:
-        st.session_state["reader_page_idx"] = 0
-
-    # ── Bidirectional scene ↔ page sync (before any widget renders) ───────────
-    _rdr_this_scene = st.session_state["scene_jump_select"]
-    _rdr_prev_scene = st.session_state.get("_rdr_prev_scene", _rdr_this_scene)
-    _rdr_prev_page  = st.session_state.get("_rdr_prev_page",  st.session_state["reader_page_idx"])
-
-    if _rdr_this_scene != _rdr_prev_scene:
-        # Scene was navigated — pull page to the scene's start
-        _sc_target = scenes[_rdr_this_scene]
-        if not getattr(_sc_target, "manually_added", False):
-            st.session_state["reader_page_idx"] = int(_sc_target.page_start)
-    elif st.session_state["reader_page_idx"] != _rdr_prev_page \
-            and not st.session_state.get("_scene_pinned"):
-        # Page was navigated independently — sync scene to wherever we've read to
-        _inferred = _scene_for_page(
-            scenes, max(0, min(st.session_state["reader_page_idx"], total_pages - 1))
-        )
-        st.session_state["scene_jump_select"] = _inferred  # safe — widget not yet rendered
-        _rdr_this_scene = _inferred
-
-    scene_idx = _rdr_this_scene
+    # State is always coherent — every nav action atomically sets both variables
+    # before calling st.rerun(), so no delta-detection needed here.
+    scene_idx = max(0, min(st.session_state.get("scene_jump_select", 0), n_scenes - 1))
+    page_idx  = max(0, min(st.session_state.get("reader_page_idx", 0), total_pages - 1))
     scene     = scenes[scene_idx]
-    page_idx  = max(0, min(st.session_state["reader_page_idx"], total_pages - 1))
-    st.session_state["_rdr_prev_scene"] = scene_idx
-    st.session_state["_rdr_prev_page"]  = page_idx
 
     col_pdf, col_notes = st.columns([3, 2], gap="small")
 
@@ -875,12 +849,18 @@ with tab_reader:
         _pg1, _pg2, _pg3 = st.columns([1, 4, 1])
         with _pg1:
             if st.button("◀", key="btn_prev_page", use_container_width=True):
-                if st.session_state["reader_page_idx"] > 0:
-                    st.session_state["reader_page_idx"] -= 1
+                _np = max(0, page_idx - 1)
+                st.session_state["reader_page_idx"] = _np
+                if not st.session_state.get("_scene_pinned", False):
+                    st.session_state["scene_jump_select"] = _scene_for_page(scenes, _np)
+                st.rerun()
         with _pg3:
             if st.button("▶", key="btn_next_page", use_container_width=True):
-                if st.session_state["reader_page_idx"] < total_pages - 1:
-                    st.session_state["reader_page_idx"] += 1
+                _np = min(total_pages - 1, page_idx + 1)
+                st.session_state["reader_page_idx"] = _np
+                if not st.session_state.get("_scene_pinned", False):
+                    st.session_state["scene_jump_select"] = _scene_for_page(scenes, _np)
+                st.rerun()
         with _pg2:
             st.markdown(
                 f"<p style='text-align:center;margin-top:6px;color:#8ABAC8;font-size:0.82rem'>"
@@ -905,23 +885,37 @@ with tab_reader:
 
     with col_notes:
         # ── Scene nav — ONE unified header ────────────────────────────────────
+        scene_labels = [f"Sc {s.number}  —  {s.raw_slug[:55]}" for s in scenes]
+
+        def _on_scene_jump():
+            idx = st.session_state["scene_jump_select"]
+            _sc = scenes[idx] if 0 <= idx < len(scenes) else None
+            if _sc and not getattr(_sc, "manually_added", False):
+                st.session_state["reader_page_idx"] = int(_sc.page_start)
+
         _cn_prev, _cn_sel, _cn_next = st.columns([1, 5, 1])
         with _cn_prev:
             if st.button("◀ Prev", use_container_width=True, key="btn_prev_scene"):
-                if st.session_state["scene_jump_select"] > 0:
-                    st.session_state["scene_jump_select"] -= 1
+                if scene_idx > 0:
+                    _tgt = scene_idx - 1
+                    st.session_state["scene_jump_select"] = _tgt
+                    if not getattr(scenes[_tgt], "manually_added", False):
+                        st.session_state["reader_page_idx"] = int(scenes[_tgt].page_start)
                     st.rerun()
         with _cn_next:
             if st.button("Next ▶", use_container_width=True, key="btn_next_scene"):
-                if st.session_state["scene_jump_select"] < n_scenes - 1:
-                    st.session_state["scene_jump_select"] += 1
+                if scene_idx < n_scenes - 1:
+                    _tgt = scene_idx + 1
+                    st.session_state["scene_jump_select"] = _tgt
+                    if not getattr(scenes[_tgt], "manually_added", False):
+                        st.session_state["reader_page_idx"] = int(scenes[_tgt].page_start)
                     st.rerun()
         with _cn_sel:
-            scene_labels = [f"Sc {s.number}  —  {s.raw_slug[:55]}" for s in scenes]
             st.selectbox(
                 "Jump to scene", options=range(n_scenes),
                 format_func=lambda i: scene_labels[i],
                 key="scene_jump_select", label_visibility="collapsed",
+                on_change=_on_scene_jump,
             )
 
         _manual_tag = ("&nbsp;·&nbsp;<span style='color:#f57c00'>manual</span>"
