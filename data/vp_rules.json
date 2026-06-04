@@ -1,244 +1,244 @@
 {
   "learned": {
     "WASHINGTON D.C.": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "HOTEL WASHINGTON": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 2,
       "pending": {}
     },
     "HOTEL WASHINGTON - HALLWAY/ROOM 736": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "HOTEL WASHINGTON - ROOM 738": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 3,
       "pending": {}
     },
     "HOTEL WASHINGTON - ROOM 736": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 3,
       "pending": {}
     },
     "SERVICE STATION": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 3,
       "pending": {}
     },
     "SERVICE STATION - GARAGE": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 3,
       "pending": {}
     },
     "WINNEBAGO": {
-      "recommendation": "VP (INT. Vehicle)",
+      "recommendation": "INT. CAR",
       "count": 5,
       "pending": {}
     },
     "HIGHWAY": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 3,
       "pending": {}
     },
     "SIDE OF THE HIGHWAY": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "CHEVY": {
-      "recommendation": "VP (INT. Vehicle)",
+      "recommendation": "INT. CAR",
       "count": 1,
       "pending": {
-        "Option: Either": 1
+        "EITHER": 1
       }
     },
     "MUSICAL TRAVEL MONTAGE": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "UNCLE WILLY\u2019S PLACE": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 2,
       "pending": {}
     },
     "UNCLE WILLY'S PLACE": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 2,
       "pending": {}
     },
     "CLEARWATER BEACH": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 4,
       "pending": {}
     },
     "OCEAN - IN WILLY\u2019S BOAT": {
-      "recommendation": "VP (INT. Aircraft)",
+      "recommendation": "INT. PLANE",
       "count": 1,
       "pending": {}
     },
     "CLEARWATER BEACH - STAGE AREA": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 2,
       "pending": {}
     },
     "CLEARWATER BEACH - SHORELINE": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "CLEARWATER BEACH - SIDE OF STAGE": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "UNCLE WILLY\u2019S": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "UNCLE WILLY\u2019S DOCK": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "CLEARWATER BEACH - TIKI HUT": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 4,
       "pending": {}
     },
     "HOOTERS (FORMERLY UNCLE WILLY\u2019S)": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "HOOTERS": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 34,
       "pending": {
-        "On Location": 20
+        "LOCATION": 20
       }
     },
     "CLEARWATER CAUSEWAY - BEACH": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "HOOTERS - SIDE STREET": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 2,
       "pending": {}
     },
     "HOOTERS - BACK OFFICE": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 3,
       "pending": {}
     },
     "HOOTERS - ATTIC": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 2,
       "pending": {}
     },
     "HOOTERS - BACK OFFICE / SERVICE STATION": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "LAW OFFICE": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "HOOTERS - KITCHEN": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "CABLE ACCESS TV STUDIO": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "PAIGE\u2019S FITNESS CENTER": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "PLEASANT VALLEY RETIREMENT COMMUNITY": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "LENNY\u2019S NEW WINNEBAGO": {
-      "recommendation": "VP (INT. Vehicle)",
+      "recommendation": "INT. CAR",
       "count": 3,
       "pending": {}
     },
     "TED\u2019S NEW WINNEBAGO": {
-      "recommendation": "VP (INT. Vehicle)",
+      "recommendation": "INT. CAR",
       "count": 1,
       "pending": {}
     },
     "COURTHOUSE": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "HOTEL WASHINGTON - LOBBY": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 2,
       "pending": {}
     },
     "HOTEL WASHINGTON - BAR": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 3,
       "pending": {}
     },
     "HOTEL WASHINGTON - ROOFTOP": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "WASHINGTON CITYSCAPE": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "WASHINGTON HOTEL - ROOM 738": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "WASHINGTON HOTEL - ROOM 736": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {}
     },
     "THE HOTEL WASHINGTON": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 1,
       "pending": {}
     },
     "FREEDOM PLAZA": {
-      "recommendation": "On Location",
+      "recommendation": "LOCATION",
       "count": 6,
       "pending": {}
     },
     "TED\u2019S DAD\u2019S WINNEBAGO": {
-      "recommendation": "VP (INT. Vehicle)",
+      "recommendation": "INT. CAR",
       "count": 2,
       "pending": {}
     },
     "CHAPEL BY THE SEA": {
-      "recommendation": "Option: Either",
+      "recommendation": "EITHER",
       "count": 1,
       "pending": {
-        "On Location": 1
+        "LOCATION": 1
       }
     }
   },

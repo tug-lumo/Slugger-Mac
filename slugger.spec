@@ -5,7 +5,7 @@ datas = []
 binaries = []
 hiddenimports = []
 
-for pkg in ('streamlit', 'fitz', 'altair', 'pandas', 'openpyxl'):
+for pkg in ('streamlit', 'fitz', 'altair', 'pandas', 'openpyxl', 'rumps'):
     d, b, h = collect_all(pkg)
     datas += d; binaries += b; hiddenimports += h
 
@@ -60,9 +60,11 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Slugger.app',
+    icon='slugger.icns',
     bundle_identifier='com.lumostage.slugger',
     info_plist={
         'NSHighResolutionCapable': True,
         'CFBundleShortVersionString': '1.0.0',
+        'LSUIElement': True,  # hide Dock icon — lives in menu bar only
     },
 )

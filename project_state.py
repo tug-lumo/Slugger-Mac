@@ -7,6 +7,8 @@ Each project is saved as  saves/{safe_title}.json  containing:
   - custom approach label additions
 """
 
+from __future__ import annotations
+
 import json
 import re
 import sys

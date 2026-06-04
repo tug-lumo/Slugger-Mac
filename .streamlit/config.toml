@@ -1,3 +1,6 @@
+[global]
+developmentMode = false
+
 [theme]
 primaryColor      = "#0060FE"
 backgroundColor   = "#13191A"

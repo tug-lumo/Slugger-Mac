@@ -12,6 +12,8 @@ Two layers:
 Learned rules are stored in data/vp_rules.json and persist across sessions.
 """
 
+from __future__ import annotations
+
 import json
 import re
 import sys
