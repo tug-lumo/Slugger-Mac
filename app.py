@@ -95,9 +95,16 @@ st.markdown("""
         font-style: italic; margin-top: 1px;
     }
     #MainMenu { visibility: hidden; }
-    header[data-testid="stHeader"] { visibility: hidden; height: 0; min-height: 0; padding: 0; }
-    [data-testid="collapsedControl"] { visibility: visible !important; }
+    header[data-testid="stHeader"] { height: 0 !important; min-height: 0 !important; overflow: visible !important; }
     [data-testid="stToolbar"] { display: none; }
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 0.4rem !important;
+        left: 0.4rem !important;
+        z-index: 99999 !important;
+    }
     .block-container { padding-top: 0.75rem; }
     [data-testid="stSidebar"] {
         border-right: 1px solid #00EFEA22; background: #0E1416;
