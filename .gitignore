@@ -2,8 +2,14 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
-saves/
 dist/
 build/
 *.app
 .DS_Store
+
+# Per-project breakdown saves — local to each machine, not shared
+saves/
+
+# data/ files ARE tracked:
+#   data/approaches.json — approach config (should sync across machines)
+#   data/vp_rules.json   — learned rules (commit to share, pull to receive)
