@@ -1,4 +1,4 @@
-"""
+﻿"""
 Approach configuration — single source of truth for the approach hierarchy.
 Loads from data/approaches.json; user can edit via the Options tab.
 Handles bundled .app paths and provides migration for legacy approach names.

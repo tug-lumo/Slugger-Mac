@@ -5,86 +5,178 @@
     "UNREAL STOCK",
     "PRACTICAL PLATES",
     "VFX PLATES",
-    "SET BUILD"
+    "SET BUILD",
+    "HYBRID STANDING SET"
   ],
   "approaches": [
     {
       "name": "VPROD",
       "lumo": "YES",
       "colour": "FFF2CC",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": false, "PRACTICAL PLATES": true, "VFX PLATES": true, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "INT. CAR",
       "lumo": "YES",
       "colour": "E2EFDA",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": false, "PRACTICAL PLATES": true, "VFX PLATES": true, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "INT. PLANE",
       "lumo": "NO",
       "colour": "D9EAD3",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": true, "PRACTICAL PLATES": true, "VFX PLATES": true, "SET BUILD": true}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": true,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "HYBRID VIRTUAL",
       "lumo": "YES",
       "colour": "FCE4D6",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": false, "PRACTICAL PLATES": false, "VFX PLATES": false, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": false,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "INT. SUBWAY TRAIN",
       "lumo": "YES",
       "colour": "C4D9F5",
-      "solutions": {"CUSTOM/VAD": false, "UNREAL STOCK": false, "PRACTICAL PLATES": false, "VFX PLATES": true, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": false,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": true,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "INT. PLATFORM",
       "lumo": "YES",
       "colour": "B8D4F0",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": true, "PRACTICAL PLATES": false, "VFX PLATES": true, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": true,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "EXT. ROOFTOP",
       "lumo": "YES",
       "colour": "D4EAD4",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": true, "PRACTICAL PLATES": true, "VFX PLATES": true, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "EXT. DESERT",
       "lumo": "YES",
       "colour": "F5E6C4",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": true, "PRACTICAL PLATES": true, "VFX PLATES": true, "SET BUILD": true}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": true,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "EITHER",
       "lumo": "NO",
       "colour": "C8D8E0",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": true, "PRACTICAL PLATES": true, "VFX PLATES": true, "SET BUILD": true}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": true,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "LOCATION",
       "lumo": "NO",
       "colour": "DDEBF7",
-      "solutions": {"CUSTOM/VAD": false, "UNREAL STOCK": false, "PRACTICAL PLATES": false, "VFX PLATES": false, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": false,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": false,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "STUDIO",
       "lumo": "NO",
       "colour": "E8E8E8",
-      "solutions": {"CUSTOM/VAD": false, "UNREAL STOCK": false, "PRACTICAL PLATES": false, "VFX PLATES": false, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": false,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": false,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "VFX",
       "lumo": "NO",
       "colour": "F4CCCC",
-      "solutions": {"CUSTOM/VAD": true, "UNREAL STOCK": true, "PRACTICAL PLATES": false, "VFX PLATES": false, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": false,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     },
     {
       "name": "OMITTED",
       "lumo": "NO",
       "colour": "D9D9D9",
-      "solutions": {"CUSTOM/VAD": false, "UNREAL STOCK": false, "PRACTICAL PLATES": false, "VFX PLATES": false, "SET BUILD": false}
+      "solutions": {
+        "CUSTOM/VAD": false,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": false,
+        "VFX PLATES": false,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": false
+      }
     }
   ]
 }
