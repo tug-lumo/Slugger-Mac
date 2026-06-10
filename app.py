@@ -205,6 +205,19 @@ st.markdown("""
         max-width: none;
         border-radius: 2px;
     }
+    /* ── Focus / fullscreen mode ── */
+    :fullscreen [data-testid="stSidebar"],
+    :-webkit-full-screen [data-testid="stSidebar"] { display: none !important; }
+    :fullscreen .script-banner,
+    :-webkit-full-screen .script-banner { display: none !important; }
+    :fullscreen .block-container,
+    :-webkit-full-screen .block-container { max-width: 100% !important; padding: 0.5rem 1rem !important; }
+    :fullscreen [data-testid="stAlert"],
+    :-webkit-full-screen [data-testid="stAlert"] { display: none !important; }
+    /* ── Focus mode (session-state CSS override) ── */
+    .slugger-focus [data-testid="stSidebar"] { display: none !important; }
+    .slugger-focus .script-banner { display: none !important; }
+    .slugger-focus .block-container { max-width: 100% !important; padding: 0.5rem 1rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -240,12 +253,23 @@ def _init_state():
         "custom_labels":    [],
         "_scene_pinned":    False,
         "reader_zoom_pct":  100,
+        "focus_mode":       False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 _init_state()
+
+# Focus mode: override sidebar-force CSS to hide chrome
+if st.session_state.get("focus_mode"):
+    st.markdown("""
+<style>
+[data-testid="stSidebar"] { display: none !important; }
+.script-banner { display: none !important; }
+.block-container { max-width: 100% !important; padding: 0.5rem 1rem !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # Convenience accessors
 _ac = st.session_state["approach_config"]
@@ -759,13 +783,15 @@ with tab_reader:
 
     n_scenes = len(scenes)
 
-    # Keyboard shortcuts: ←/→ page, ↑/↓ scene
+    # Keyboard shortcuts + PDF viewport sizing
     _zoom_pct = st.session_state.get("reader_zoom_pct", 100)
     components.html(f"""
 <script>
 (function() {{
     var doc = window.parent.document;
-    function click(text) {{
+
+    // ── Keyboard nav ──────────────────────────────────────────────────────────
+    function clickBtn(text) {{
         var btns = doc.querySelectorAll('button');
         for (var i = 0; i < btns.length; i++) {{
             if (btns[i].innerText.trim() === text) {{ btns[i].click(); return; }}
@@ -779,56 +805,65 @@ with tab_reader:
         if (role === 'listbox' || role === 'option' || role === 'combobox') return;
         if (el && el.closest && el.closest('[data-baseweb="select"]')) return;
         switch (e.key) {{
-            case 'ArrowLeft':  e.preventDefault(); click('◀'); break;
-            case 'ArrowRight': e.preventDefault(); click('▶'); break;
-            case 'ArrowUp':    e.preventDefault(); click('◀ Prev'); break;
-            case 'ArrowDown':  e.preventDefault(); click('Next ▶'); break;
+            case 'ArrowLeft':  e.preventDefault(); clickBtn('◀'); break;
+            case 'ArrowRight': e.preventDefault(); clickBtn('▶'); break;
+            case 'ArrowUp':    e.preventDefault(); clickBtn('◀ Prev'); break;
+            case 'ArrowDown':  e.preventDefault(); clickBtn('Next ▶'); break;
+            case 'f': case 'F':
+                e.preventDefault();
+                if (!doc.fullscreenElement) {{
+                    try {{ doc.documentElement.requestFullscreen(); }} catch(ex) {{}}
+                }} else {{
+                    try {{ doc.exitFullscreen(); }} catch(ex) {{}}
+                }}
+                break;
         }}
     }}
-    if (window.parent._sluggerKey) {{
-        doc.removeEventListener('keydown', window.parent._sluggerKey);
-    }}
+    if (window.parent._sluggerKey) doc.removeEventListener('keydown', window.parent._sluggerKey);
     window.parent._sluggerKey = onKey;
     doc.addEventListener('keydown', onKey);
 
-    // Viewport-fit: size image so the full page is visible at 100% zoom,
-    // then scale proportionally at higher zoom levels (enables scrolling).
-    function _setH() {{
-        var c = doc.querySelector('[data-testid="stImage"]')
-               || doc.querySelector('.reader-pdf-container');
-        if (!c) {{ setTimeout(_setH, 120); return; }}
-        var img = c.querySelector('img');
-        if (!img || !img.complete || !img.naturalWidth) {{
-            if (img) {{ img.onload = _setH; }} else {{ setTimeout(_setH, 120); }}
-            return;
+    // ── PDF height-first viewport fitting ────────────────────────────────────
+    function _sizeImg() {{
+        var img = doc.querySelector('[data-testid="stImage"] img');
+        if (!img) {{ setTimeout(_sizeImg, 200); return; }}
+
+        function doSize() {{
+            if (!img.naturalWidth || !img.naturalHeight) {{
+                setTimeout(_sizeImg, 150); return;
+            }}
+            var top = img.getBoundingClientRect().top;
+            // If layout hasn't settled yet, retry
+            if (top < 30) {{ setTimeout(_sizeImg, 200); return; }}
+            // Available height: from image top to viewport bottom, minus page-nav+zoom below (~80px)
+            var availH = Math.max(280, window.parent.innerHeight - top - 80);
+            var dispH = availH * {_zoom_pct} / 100;
+            var dispW = dispH * img.naturalWidth / img.naturalHeight;
+            img.style.setProperty('height', dispH + 'px', 'important');
+            img.style.setProperty('width', dispW + 'px', 'important');
+            img.style.setProperty('max-width', 'none', 'important');
+            img.style.setProperty('display', 'block', 'important');
+            img.style.margin = '0 auto';
+            img.style.borderRadius = '2px';
+            // Container: clip at 100%, scroll only when zoomed in
+            var c = img.closest('[data-testid="stImage"]') || img.parentElement;
+            if (c) {{
+                c.style.overflow = ({_zoom_pct} > 100) ? 'auto' : 'hidden';
+                c.style.maxHeight = availH + 'px';
+            }}
         }}
-        var top = c.getBoundingClientRect().top;
-        var availH = Math.max(400, window.parent.innerHeight - top - 90);
-        var aspect = img.naturalWidth / img.naturalHeight;
-        // Base width = whatever fills the available height exactly (portrait page)
-        var baseW = availH * aspect;
-        var displayW = baseW * {_zoom_pct} / 100;
-        c.style.height = availH + 'px';
-        c.style.overflow = ({_zoom_pct} > 100) ? 'auto' : 'hidden';
-        c.style.background = '#0D1214';
-        c.style.borderRadius = '6px';
-        c.style.border = '1px solid rgba(0,96,254,0.08)';
-        c.style.display = 'flex';
-        c.style.alignItems = 'flex-start';
-        c.style.justifyContent = 'center';
-        img.style.setProperty('width', displayW + 'px', 'important');
-        img.style.setProperty('max-width', 'none', 'important');
-        img.style.setProperty('height', 'auto', 'important');
-        img.style.display = 'block';
-        img.style.flexShrink = '0';
-        img.style.borderRadius = '2px';
+
+        if (img.complete && img.naturalWidth) {{ doSize(); }}
+        else {{
+            img.addEventListener('load', doSize, {{once: true}});
+            setTimeout(doSize, 150);
+        }}
     }}
-    if (window.parent._sluggerResize) {{
-        window.parent.removeEventListener('resize', window.parent._sluggerResize);
-    }}
-    window.parent._sluggerResize = _setH;
-    window.parent.addEventListener('resize', _setH);
-    _setH();
+
+    if (window.parent._sluggerResize) window.parent.removeEventListener('resize', window.parent._sluggerResize);
+    window.parent._sluggerResize = _sizeImg;
+    window.parent.addEventListener('resize', _sizeImg);
+    setTimeout(_sizeImg, 80);
 }})();
 </script>
 """, height=0)
@@ -853,7 +888,7 @@ with tab_reader:
         elif pdf_bytes:
             with st.spinner("Rendering…"):
                 png = render_page(pdf_bytes, page_idx)
-            st.image(png, use_container_width=True)
+            st.image(png, use_container_width=False)
         else:
             st.markdown(
                 "<div class='reader-pdf-container' style='display:flex;align-items:center;"
@@ -928,16 +963,15 @@ with tab_reader:
                         st.session_state["reader_page_idx"] = int(scenes[_tgt].page_start)
                     st.rerun()
         with _cn_fs:
-            st.markdown(
-                '<button onclick="if(!document.fullscreenElement){'
-                'document.documentElement.requestFullscreen();}else{'
-                'document.exitFullscreen();}" '
-                'title="Toggle fullscreen" '
-                'style="background:#1C2427;border:1px solid #0060FE40;color:#8ABAC8;'
-                'border-radius:4px;padding:0;width:100%;height:38px;cursor:pointer;'
-                'font-size:1rem;line-height:38px;text-align:center;display:block;">⛶</button>',
-                unsafe_allow_html=True,
-            )
+            _focus_on = st.session_state.get("focus_mode", False)
+            if st.button(
+                "✕" if _focus_on else "⛶",
+                key="btn_focus_mode",
+                use_container_width=True,
+                help="Exit focus mode" if _focus_on else "Focus mode — hide sidebar & banner (press F for browser fullscreen)",
+            ):
+                st.session_state["focus_mode"] = not _focus_on
+                st.rerun()
         with _cn_sel:
             st.selectbox(
                 "Jump to scene", options=range(n_scenes),
@@ -990,6 +1024,33 @@ with tab_reader:
             f"confidence: {scene.confidence}</p>",
             unsafe_allow_html=True,
         )
+
+        # ── Stage Directions ──────────────────────────────────────────────────
+        _dir_key = f"_dir_{scene_idx}"
+        _has_dir = bool(scene.stage_directions or scene.stage_directions_notes)
+        if _has_dir:
+            if _dir_key not in st.session_state:
+                st.session_state[_dir_key] = scene.stage_directions_notes or scene.stage_directions
+            scene.stage_directions_notes = st.text_area(
+                "Stage Directions", key=_dir_key, height=160,
+                help="Parsed action lines. Edit to annotate; Save persists, Last Save reverts, Raw Script restores original.",
+            )
+            _ds1, _ds2, _ds3 = st.columns(3)
+            with _ds1:
+                if st.button("💾 Save", key=f"_drsv_{scene_idx}", use_container_width=True):
+                    save_project(title, scenes, st.session_state.get("project_rules", []), st.session_state.get("custom_labels", []))
+                    st.toast("Stage directions saved.")
+            with _ds2:
+                if st.button("↩ Last Save", key=f"_drls_{scene_idx}", use_container_width=True):
+                    _saved = load_project(title)
+                    if _saved:
+                        _prev = _saved.get("scenes", {}).get(scene.number, {}).get("stage_directions_notes", "")
+                        st.session_state[_dir_key] = _prev or scene.stage_directions
+                    st.rerun()
+            with _ds3:
+                if st.button("↩ Raw Script", key=f"_drrs_{scene_idx}", use_container_width=True):
+                    st.session_state[_dir_key] = scene.stage_directions
+                    st.rerun()
 
         # ── Production Notes ──────────────────────────────────────────────────
         notes_key = f"_notes_{scene_idx}"
