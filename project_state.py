@@ -89,6 +89,7 @@ def save_project(
                 "vfx_notes": s.vfx_notes,
                 "production_notes": s.production_notes,
                 "volume_solutions": getattr(s, "volume_solutions", {}),
+                "stage_directions_notes": getattr(s, "stage_directions_notes", ""),
             }
             for s in scenes
             if s.number and not getattr(s, "manually_added", False)
@@ -166,10 +167,11 @@ def apply_save_to_scenes(scenes: list, saved: dict) -> int:
             continue
         entry = scene_map.get(scene.number)
         if entry:
-            scene.recommendation    = entry.get("recommendation", scene.recommendation)
-            scene.vfx_notes         = entry.get("vfx_notes", "")
-            scene.production_notes  = entry.get("production_notes", "")
-            scene.volume_solutions  = entry.get("volume_solutions", {})
+            scene.recommendation          = entry.get("recommendation", scene.recommendation)
+            scene.vfx_notes               = entry.get("vfx_notes", "")
+            scene.production_notes        = entry.get("production_notes", "")
+            scene.volume_solutions        = entry.get("volume_solutions", {})
+            scene.stage_directions_notes  = entry.get("stage_directions_notes", "")
             updated += 1
     return updated + len(saved.get("manually_added_scenes", []))
 

@@ -100,6 +100,8 @@ class Scene:
     production_notes: str = ""
     manually_added: bool = False
     volume_solutions: dict = field(default_factory=dict)
+    stage_directions: str = ""
+    stage_directions_notes: str = ""
 
 
 def _is_screenplay_font(fontname: str) -> bool:
@@ -293,7 +295,8 @@ def _synth_slug(lines: list, start: int, end: int, fallback_pos: float):
 
 
 def _fill_scene_content(scene: Scene, lines: list, start: int, end: int) -> None:
-    """Extract character names and first description line from a scene's text range."""
+    """Extract character names, first description, and stage direction lines from a scene's text range."""
+    action_lines: list[str] = []
     for i in range(start, end):
         line = lines[i]
         text = line["text"]
@@ -317,6 +320,14 @@ def _fill_scene_content(scene: Scene, lines: list, start: int, end: int) -> None
             continue
         if not scene.description and not text.isupper() and len(text) > 15:
             scene.description = text[:250]
+        if (
+            not text.isupper()
+            and len(text.strip()) > 10
+            and not text.strip().startswith("(")
+            and line["x"] < 145
+        ):
+            action_lines.append(text.strip())
+    scene.stage_directions = "\n".join(action_lines)
 
 
 # ── Parse entry point ────────────────────────────────────────────────────────
@@ -459,6 +470,16 @@ def parse_screenplay(pdf_path: str) -> tuple[list[Scene], int]:
 
         if not current.description and not text.isupper() and len(text) > 15:
             current.description = text[:250]
+        if (
+            not text.isupper()
+            and len(text.strip()) > 10
+            and not text.strip().startswith("(")
+            and line["x"] < 145
+        ):
+            current.stage_directions = (
+                current.stage_directions + "\n" + text.strip()
+                if current.stage_directions else text.strip()
+            )
 
     for i, scene in enumerate(scenes):
         end = scenes[i + 1].page_start if i + 1 < len(scenes) else total_pages

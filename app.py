@@ -791,29 +791,37 @@ with tab_reader:
     window.parent._sluggerKey = onKey;
     doc.addEventListener('keydown', onKey);
 
-    // Viewport-fit: target st.image element or fallback placeholder div.
-    // Zoom is applied as img width % so the image can scroll within the container.
+    // Viewport-fit: size image so the full page is visible at 100% zoom,
+    // then scale proportionally at higher zoom levels (enables scrolling).
     function _setH() {{
         var c = doc.querySelector('[data-testid="stImage"]')
                || doc.querySelector('.reader-pdf-container');
         if (!c) {{ setTimeout(_setH, 120); return; }}
+        var img = c.querySelector('img');
+        if (!img || !img.complete || !img.naturalWidth) {{
+            if (img) {{ img.onload = _setH; }} else {{ setTimeout(_setH, 120); }}
+            return;
+        }}
         var top = c.getBoundingClientRect().top;
-        var h = Math.max(400, window.parent.innerHeight - top - 10);
-        c.style.height = h + 'px';
-        c.style.overflow = 'auto';
+        var availH = Math.max(400, window.parent.innerHeight - top - 90);
+        var aspect = img.naturalWidth / img.naturalHeight;
+        // Base width = whatever fills the available height exactly (portrait page)
+        var baseW = availH * aspect;
+        var displayW = baseW * {_zoom_pct} / 100;
+        c.style.height = availH + 'px';
+        c.style.overflow = ({_zoom_pct} > 100) ? 'auto' : 'hidden';
         c.style.background = '#0D1214';
         c.style.borderRadius = '6px';
         c.style.border = '1px solid rgba(0,96,254,0.08)';
-        c.style.textAlign = 'center';
-        var img = c.querySelector('img');
-        if (img) {{
-            img.style.setProperty('width', '{_zoom_pct}%', 'important');
-            img.style.setProperty('max-width', 'none', 'important');
-            img.style.height = 'auto';
-            img.style.display = 'block';
-            img.style.margin = '0 auto';
-            img.style.borderRadius = '2px';
-        }}
+        c.style.display = 'flex';
+        c.style.alignItems = 'flex-start';
+        c.style.justifyContent = 'center';
+        img.style.setProperty('width', displayW + 'px', 'important');
+        img.style.setProperty('max-width', 'none', 'important');
+        img.style.setProperty('height', 'auto', 'important');
+        img.style.display = 'block';
+        img.style.flexShrink = '0';
+        img.style.borderRadius = '2px';
     }}
     if (window.parent._sluggerResize) {{
         window.parent.removeEventListener('resize', window.parent._sluggerResize);
@@ -902,7 +910,7 @@ with tab_reader:
             if _sc and not getattr(_sc, "manually_added", False):
                 st.session_state["reader_page_idx"] = int(_sc.page_start)
 
-        _cn_prev, _cn_sel, _cn_next = st.columns([1, 5, 1])
+        _cn_prev, _cn_sel, _cn_next, _cn_fs = st.columns([1, 5, 1, 1])
         with _cn_prev:
             if st.button("◀ Prev", use_container_width=True, key="btn_prev_scene"):
                 if scene_idx > 0:
@@ -919,6 +927,17 @@ with tab_reader:
                     if not getattr(scenes[_tgt], "manually_added", False):
                         st.session_state["reader_page_idx"] = int(scenes[_tgt].page_start)
                     st.rerun()
+        with _cn_fs:
+            st.markdown(
+                '<button onclick="if(!document.fullscreenElement){'
+                'document.documentElement.requestFullscreen();}else{'
+                'document.exitFullscreen();}" '
+                'title="Toggle fullscreen" '
+                'style="background:#1C2427;border:1px solid #0060FE40;color:#8ABAC8;'
+                'border-radius:4px;padding:0;width:100%;height:38px;cursor:pointer;'
+                'font-size:1rem;line-height:38px;text-align:center;display:block;">⛶</button>',
+                unsafe_allow_html=True,
+            )
         with _cn_sel:
             st.selectbox(
                 "Jump to scene", options=range(n_scenes),
