@@ -192,8 +192,7 @@ st.markdown("""
     .vol-sol-label { font-size: 0.68rem; color: #8ABAC8; text-transform: uppercase; letter-spacing: 0.08em; margin: 10px 0 2px 0; }
     [data-testid="stMetricLabel"] { color: #8ABAC8 !important; }
     [data-testid="stMetricValue"] { color: #F2F2F2 !important; }
-    [data-testid="stImage"],
-    [data-testid="stImage"] > div {
+    [data-testid="stImage"] {
         display: flex !important;
         justify-content: center !important;
         align-items: flex-start !important;
@@ -841,20 +840,15 @@ with tab_reader:
             img.style.setProperty('display', 'block', 'important');
             img.style.margin = '0';
             img.style.borderRadius = '2px';
-            // Walk every wrapper from img up to the column and force centering.
-            // Streamlit nests several intermediate divs; all must be full-width flex.
-            var colEl = img.closest('[data-testid="column"]');
-            var node = img.parentElement;
-            while (node && node !== colEl) {{
-                node.style.setProperty('display', 'flex', 'important');
-                node.style.setProperty('justify-content', 'center', 'important');
-                node.style.setProperty('align-items', 'flex-start', 'important');
-                node.style.setProperty('width', '100%', 'important');
-                if (node === img.closest('[data-testid="stImage"]')) {{
-                    node.style.setProperty('overflow', ({_zoom_pct} > 100) ? 'auto' : 'hidden', 'important');
-                    node.style.setProperty('max-height', availH + 'px', 'important');
-                }}
-                node = node.parentElement;
+            // Container: center image, clip at 100%, scroll only when zoomed in
+            var c = img.closest('[data-testid="stImage"]') || img.parentElement;
+            if (c) {{
+                c.style.display = 'flex';
+                c.style.justifyContent = 'center';
+                c.style.alignItems = 'flex-start';
+                c.style.width = '100%';
+                c.style.overflow = ({_zoom_pct} > 100) ? 'auto' : 'hidden';
+                c.style.maxHeight = availH + 'px';
             }}
         }}
 
