@@ -192,6 +192,12 @@ st.markdown("""
     .vol-sol-label { font-size: 0.68rem; color: #8ABAC8; text-transform: uppercase; letter-spacing: 0.08em; margin: 10px 0 2px 0; }
     [data-testid="stMetricLabel"] { color: #8ABAC8 !important; }
     [data-testid="stMetricValue"] { color: #F2F2F2 !important; }
+    [data-testid="stImage"] {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
     .reader-pdf-container {
         overflow: auto;
         text-align: center;
