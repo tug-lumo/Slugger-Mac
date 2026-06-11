@@ -838,17 +838,23 @@ with tab_reader:
             img.style.setProperty('width', dispW + 'px', 'important');
             img.style.setProperty('max-width', 'none', 'important');
             img.style.setProperty('display', 'block', 'important');
-            img.style.margin = '0';
+            img.style.setProperty('margin', '0', 'important');
             img.style.borderRadius = '2px';
-            // Container: center image, clip at 100%, scroll only when zoomed in
-            var c = img.closest('[data-testid="stImage"]') || img.parentElement;
-            if (c) {{
-                c.style.display = 'flex';
-                c.style.justifyContent = 'center';
-                c.style.alignItems = 'flex-start';
-                c.style.width = '100%';
-                c.style.overflow = ({_zoom_pct} > 100) ? 'auto' : 'hidden';
-                c.style.maxHeight = availH + 'px';
+            // Walk every wrapper between img and the column, forcing full-width flex centering.
+            // Only apply overflow/maxHeight on the stImage element itself.
+            var stImgEl = img.closest('[data-testid="stImage"]');
+            var colEl   = img.closest('[data-testid="column"]');
+            var node = img.parentElement;
+            while (node && node !== colEl) {{
+                node.style.setProperty('display', 'flex', 'important');
+                node.style.setProperty('justify-content', 'center', 'important');
+                node.style.setProperty('align-items', 'flex-start', 'important');
+                node.style.setProperty('width', '100%', 'important');
+                node = node.parentElement;
+            }}
+            if (stImgEl) {{
+                stImgEl.style.setProperty('overflow', ({_zoom_pct} > 100) ? 'auto' : 'hidden', 'important');
+                stImgEl.style.setProperty('max-height', availH + 'px', 'important');
             }}
         }}
 
