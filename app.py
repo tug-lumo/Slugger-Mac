@@ -843,11 +843,15 @@ with tab_reader:
             img.style.setProperty('width', dispW + 'px', 'important');
             img.style.setProperty('max-width', 'none', 'important');
             img.style.setProperty('display', 'block', 'important');
-            img.style.margin = '0 auto';
+            img.style.margin = '0';
             img.style.borderRadius = '2px';
-            // Container: clip at 100%, scroll only when zoomed in
+            // Container: center image, clip at 100%, scroll only when zoomed in
             var c = img.closest('[data-testid="stImage"]') || img.parentElement;
             if (c) {{
+                c.style.display = 'flex';
+                c.style.justifyContent = 'center';
+                c.style.alignItems = 'flex-start';
+                c.style.width = '100%';
                 c.style.overflow = ({_zoom_pct} > 100) ? 'auto' : 'hidden';
                 c.style.maxHeight = availH + 'px';
             }}
