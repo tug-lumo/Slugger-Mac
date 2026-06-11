@@ -253,23 +253,12 @@ def _init_state():
         "custom_labels":    [],
         "_scene_pinned":    False,
         "reader_zoom_pct":  100,
-        "focus_mode":       False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
 _init_state()
-
-# Focus mode: override sidebar-force CSS to hide chrome
-if st.session_state.get("focus_mode"):
-    st.markdown("""
-<style>
-[data-testid="stSidebar"] { display: none !important; }
-.script-banner { display: none !important; }
-.block-container { max-width: 100% !important; padding: 0.5rem 1rem !important; }
-</style>
-""", unsafe_allow_html=True)
 
 # Convenience accessors
 _ac = st.session_state["approach_config"]
@@ -967,15 +956,24 @@ with tab_reader:
                         st.session_state["reader_page_idx"] = int(scenes[_tgt].page_start)
                     st.rerun()
         with _cn_fs:
-            _focus_on = st.session_state.get("focus_mode", False)
-            if st.button(
-                "✕" if _focus_on else "⛶",
-                key="btn_focus_mode",
-                use_container_width=True,
-                help="Exit focus mode" if _focus_on else "Focus mode — hide sidebar & banner (press F for browser fullscreen)",
-            ):
-                st.session_state["focus_mode"] = not _focus_on
-                st.rerun()
+            components.html("""
+<style>
+html,body{margin:0;padding:0;background:transparent;overflow:hidden;height:100%;}
+button{
+  width:100%;height:38px;background:#1C2427;
+  border:1px solid rgba(0,96,254,0.25);color:#8ABAC8;
+  border-radius:4px;cursor:pointer;font-size:1.15rem;
+  display:block;box-sizing:border-box;font-family:sans-serif;
+}
+button:hover{background:#242E33;color:#C8DDE8;}
+button:active{background:#0D1214;}
+</style>
+<button title="Fullscreen (or press F)" onclick="
+var d=window.parent.document;
+if(!d.fullscreenElement){d.documentElement.requestFullscreen().catch(function(){});}
+else{d.exitFullscreen();}
+">⛶</button>
+""", height=40, scrolling=False)
         with _cn_sel:
             st.selectbox(
                 "Jump to scene", options=range(n_scenes),
