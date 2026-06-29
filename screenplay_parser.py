@@ -59,6 +59,46 @@ _SLUG_FALLBACK_RE = re.compile(
 
 _SLUG_STARTS = ("INT.", "EXT.", "INT./EXT.", "EXT./INT.", "I/E.")
 
+# Camera directions that appear all-caps at the left margin but are NOT scene headers.
+_CAMERA_DIRECTIONS = frozenset({
+    "CLOSE ON", "ANGLE ON", "WIDE ON", "INSERT", "POV",
+    "BACK TO SCENE", "RESUME",
+})
+
+
+def _is_nonstandard_scene_header(text: str, x: float) -> bool:
+    """
+    Heuristic: is this all-caps left-margin line a non-standard scene header?
+
+    Catches DREAMSCAPE, FLASHBACK, BLACK SCREEN, etc. without enumerating
+    every possible creative term. Guards:
+      - Must be all-caps (scene headers always are)
+      - Must be at slug x-position, not character-name indent (x < 145)
+      - No terminal sentence punctuation (action lines end with . ! ? :)
+      - Not a known transition or camera direction
+      - Not a repeated-word sound effect ("TAP TAP TAP", "ZAP ZAP")
+      - Not a quoted string (banner, slogan, sign)
+    """
+    if not text.isupper():
+        return False
+    if x >= 145:
+        return False
+    stripped = text.strip()
+    if not stripped or stripped[-1] in ".!?:":
+        return False
+    if stripped in _TRANSITIONS or stripped in _CAMERA_DIRECTIONS:
+        return False
+    if len(stripped) < 4 or len(stripped) > 80:
+        return False
+    # Quoted text (banner/sign/slogan): starts with a quote character
+    if stripped[0] in ('"', "'", '“', '‘', '«', '"'):
+        return False
+    # Sound effects: all tokens are identical ("TAP TAP TAP", "ZAP ZAP")
+    tokens = stripped.split()
+    if len(tokens) > 1 and len(set(tokens)) == 1:
+        return False
+    return True
+
 
 def _normalize_slug_prefix(text: str) -> str:
     """Collapse spacing variants: INT./ EXT. → INT./EXT., EXT./ INT. → EXT./INT."""
@@ -102,6 +142,7 @@ class Scene:
     volume_solutions: dict = field(default_factory=dict)
     stage_directions: str = ""
     stage_directions_notes: str = ""
+    flags: list = field(default_factory=list)
 
 
 def _is_screenplay_font(fontname: str) -> bool:
@@ -238,6 +279,10 @@ def _find_slug_in_range(lines: list, start: int, end: int):
         m = _try_slug_match(text)
         if m:
             return _slug_result(text, m, pos)
+
+        if _is_nonstandard_scene_header(text, lines[i]["x"]):
+            slug_text = re.sub(r"^\d+[A-Z]?\s+", "", text).strip()
+            return (text, "", slug_text.upper(), "", pos)
 
         # Does it at least START with INT./EXT.?
         stripped = re.sub(r"^\d+[A-Z]?\s+", "", text)
@@ -441,6 +486,24 @@ def parse_screenplay(pdf_path: str) -> tuple[list[Scene], int]:
                 int_ext     = ie.upper().rstrip("."),
                 location    = loc.upper().strip().replace("–", "-").replace("—", "-"),
                 time_of_day = tod.upper().strip(),
+                raw_slug    = text,
+                page_start  = line["abs_pos"],
+            )
+            scenes.append(scene)
+            continue
+
+        if _is_nonstandard_scene_header(text, line["x"]):
+            embedded = re.match(r"^(\d+[A-Z]?)\s+", text)
+            scene_num = pending_scene_num
+            if embedded:
+                scene_num = embedded.group(1)
+            slug_text = re.sub(r"^\d+[A-Z]?\s+", "", text).strip()
+            pending_scene_num = None
+            scene = Scene(
+                number      = scene_num or str(len(scenes) + 1),
+                int_ext     = "",
+                location    = slug_text.upper(),
+                time_of_day = "",
                 raw_slug    = text,
                 page_start  = line["abs_pos"],
             )
