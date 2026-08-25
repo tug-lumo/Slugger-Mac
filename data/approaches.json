@@ -177,6 +177,32 @@
         "SET BUILD": false,
         "HYBRID STANDING SET": false
       }
+    },
+    {
+      "name": "LUMOSTUDIO",
+      "lumo": "YES",
+      "colour": "555555",
+      "solutions": {
+        "CUSTOM/VAD": true,
+        "UNREAL STOCK": true,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": true,
+        "SET BUILD": true,
+        "HYBRID STANDING SET": true
+      }
+    },
+    {
+      "name": "None",
+      "lumo": "YES",
+      "colour": "555555",
+      "solutions": {
+        "CUSTOM/VAD": false,
+        "UNREAL STOCK": false,
+        "PRACTICAL PLATES": true,
+        "VFX PLATES": false,
+        "SET BUILD": false,
+        "HYBRID STANDING SET": true
+      }
     }
   ]
 }

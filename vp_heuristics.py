@@ -227,6 +227,33 @@ _PRACTICAL_EXT = {
 }
 
 
+# ── Content flags (derived from stage directions, don't override approach) ────
+
+_STUNT_ACTION_KW = {
+    "CHASE", "CAR CHASE", "FOOT CHASE", "HIGH-SPEED CHASE",
+    "PURSUIT",
+    "STUNT", "STUNT DRIVER", "STUNT DRIVING", "STUNT DOUBLE",
+    "CRASH", "COLLISION",
+    "SPIN OUT", "SPINS OUT", "FISHTAIL",
+    "HIGH SPEED", "HIGH-SPEED",
+    "SCREECH", "SQUEALING TIRES",
+    "EVASIVE",
+    "COMBAT DRIVING",
+    "ACTION SEQUENCE",
+    "SHOOTOUT", "SHOOT OUT",
+}
+
+
+def detect_scene_flags(stage_directions: str) -> list[str]:
+    """Return content flags derived from action lines. Does not affect approach."""
+    if not stage_directions:
+        return []
+    flags = []
+    if _kw_match(_STUNT_ACTION_KW, stage_directions.upper()):
+        flags.append("STUNT")
+    return flags
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _kw_match(keyword_set: set[str], text: str) -> bool:
@@ -362,6 +389,56 @@ def recommend_vp(
     return R_EITHER, "low"
 
 
+# ── Frequency-based second pass ───────────────────────────────────────────────
+
+def apply_frequency_adjustments(scenes: list) -> int:
+    """
+    Second pass over all scenes: adjust recommendations using per-location
+    page count and scene frequency.
+
+    Short + unique (≤2 scenes, ≤1 page total):
+      EITHER → VPROD  (rare location is a good LED candidate)
+
+    Heavy recurring (≥6 scenes OR ≥5 pages total):
+      EITHER → STUDIO  (economical to build; LED less practical)
+
+    Returns number of scenes changed.
+    """
+    from collections import defaultdict
+
+    loc_stats: dict = defaultdict(lambda: {"scenes": 0, "pages": 0.0})
+    for scene in scenes:
+        root = scene.location.split(" - ")[0].strip().upper() if scene.location else ""
+        pages = max(0.0, getattr(scene, "page_end", 0.0) - getattr(scene, "page_start", 0.0))
+        loc_stats[root]["scenes"] += 1
+        loc_stats[root]["pages"]  += pages
+
+    changed = 0
+    for scene in scenes:
+        if getattr(scene, "manually_added", False):
+            continue
+        if scene.confidence in ("learned", "learned (similar)"):
+            continue
+        root = scene.location.split(" - ")[0].strip().upper() if scene.location else ""
+        stats   = loc_stats[root]
+        n_sc    = stats["scenes"]
+        n_pg    = stats["pages"]
+
+        if n_sc <= 2 and n_pg <= 1.0:
+            if scene.recommendation == R_EITHER:
+                scene.recommendation = R_VPROD
+                scene.confidence = "frequency (unique)"
+                changed += 1
+
+        elif n_sc >= 6 or n_pg >= 5.0:
+            if scene.recommendation == R_EITHER:
+                scene.recommendation = R_STUDIO
+                scene.confidence = "frequency (recurring)"
+                changed += 1
+
+    return changed
+
+
 # ── Learning from user edits ──────────────────────────────────────────────────
 
 def learn_from_edits(rows: list[dict], rules: dict | None = None) -> dict:
@@ -392,6 +469,54 @@ def learn_from_edits(rows: list[dict], rules: dict | None = None) -> dict:
 
     save_rules(rules)
     return rules
+
+
+def export_rules_json(rules: dict) -> str:
+    """Serialise learned rules to a shareable JSON string."""
+    return json.dumps(rules, indent=2, ensure_ascii=False)
+
+
+def merge_rules(base: dict, incoming: dict) -> dict:
+    """
+    Merge incoming learned rules into base, accumulating vote counts.
+    Never overwrites; conflicts resolved by majority vote.
+    Saves the merged result to disk and returns it.
+    """
+    base_learned = base.setdefault("learned", {})
+    incoming_learned = incoming.get("learned", {})
+
+    for loc, inc in incoming_learned.items():
+        inc_rec   = inc.get("recommendation", "")
+        inc_count = inc.get("count", 1)
+        if not inc_rec:
+            continue
+
+        if loc not in base_learned:
+            base_learned[loc] = {
+                "recommendation": inc_rec,
+                "count": inc_count,
+                "pending": dict(inc.get("pending", {})),
+            }
+        else:
+            entry = base_learned[loc]
+            if inc_rec == entry["recommendation"]:
+                entry["count"] = entry.get("count", 1) + inc_count
+            else:
+                pending = entry.setdefault("pending", {})
+                pending[inc_rec] = pending.get(inc_rec, 0) + inc_count
+                if pending[inc_rec] > entry.get("count", 1):
+                    entry["recommendation"] = inc_rec
+                    entry["count"] = pending.pop(inc_rec)
+            # Merge pending votes from incoming
+            for p_rec, p_cnt in inc.get("pending", {}).items():
+                if p_rec == entry["recommendation"]:
+                    entry["count"] = entry.get("count", 1) + p_cnt
+                else:
+                    p = entry.setdefault("pending", {})
+                    p[p_rec] = p.get(p_rec, 0) + p_cnt
+
+    save_rules(base)
+    return base
 
 
 def rule_stats(rules: dict) -> dict:

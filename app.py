@@ -31,6 +31,10 @@ from vp_heuristics import (
     load_rules,
     learn_from_edits,
     recommend_vp,
+    detect_scene_flags,
+    apply_frequency_adjustments,
+    export_rules_json,
+    merge_rules,
     rule_stats,
 )
 from exporter import (
@@ -193,9 +197,6 @@ st.markdown("""
     [data-testid="stMetricLabel"] { color: #8ABAC8 !important; }
     [data-testid="stMetricValue"] { color: #F2F2F2 !important; }
     [data-testid="stImage"] {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: flex-start !important;
         width: 100% !important;
     }
     .reader-pdf-container {
@@ -210,6 +211,17 @@ st.markdown("""
         width: auto;
         max-width: none;
         border-radius: 2px;
+    }
+    /* PDF reader container — sized and scrolled by JS */
+    .slugger-pdf-reader {
+        background: #0D1214;
+        border-radius: 6px;
+        border: 1px solid #0060FE15;
+        overflow: hidden; /* JS switches to auto when ready */
+    }
+    .slugger-pdf-reader img {
+        display: block;
+        margin: 0 auto;
     }
     /* ── Focus / fullscreen mode ── */
     :fullscreen [data-testid="stSidebar"],
@@ -499,6 +511,9 @@ if uploaded and st.session_state.last_uploaded != uploaded.name:
         rec, conf = recommend_vp(scene.int_ext, scene.location, scene.time_of_day, rules)
         scene.recommendation = rec
         scene.confidence = conf
+        scene.flags = detect_scene_flags(scene.stage_directions)
+
+    apply_frequency_adjustments(scenes)
 
     st.session_state.scenes      = scenes
     st.session_state.total_pages = total_pages
@@ -551,6 +566,8 @@ if st.session_state.get("_open_recent"):
         for _sc in _r_scenes:
             _sc.recommendation, _sc.confidence = recommend_vp(
                 _sc.int_ext, _sc.location, _sc.time_of_day, _r_rules)
+            _sc.flags = detect_scene_flags(_sc.stage_directions)
+        apply_frequency_adjustments(_r_scenes)
         apply_save_to_scenes(_r_scenes, _recent_saved)
         st.session_state.update({
             "script_title":  _recent_title,
@@ -776,6 +793,13 @@ tab_reader, tab_breakdown, tab_location, tab_chars, tab_options, tab_help = st.t
 
 with tab_reader:
 
+    # Consume any cross-tab navigation set by other tabs.
+    # Must happen before the scene_jump_select selectbox is instantiated.
+    if "_pending_reader_jump" in st.session_state:
+        _pj = st.session_state.pop("_pending_reader_jump")
+        st.session_state["scene_jump_select"] = _pj["scene_idx"]
+        st.session_state["reader_page_idx"]   = _pj["page_idx"]
+
     n_scenes = len(scenes)
 
     # Keyboard shortcuts + PDF viewport sizing
@@ -820,44 +844,34 @@ with tab_reader:
 
     // ── PDF height-first viewport fitting ────────────────────────────────────
     function _sizeImg() {{
-        var img = doc.querySelector('[data-testid="stImage"] img');
+        var container = doc.querySelector('.slugger-pdf-reader');
+        if (!container) {{ setTimeout(_sizeImg, 200); return; }}
+        var img = container.querySelector('img');
         if (!img) {{ setTimeout(_sizeImg, 200); return; }}
 
         function doSize() {{
             if (!img.naturalWidth || !img.naturalHeight) {{
                 setTimeout(_sizeImg, 150); return;
             }}
-            var top = img.getBoundingClientRect().top;
-            // If layout hasn't settled yet, retry
-            if (top < 30) {{ setTimeout(_sizeImg, 200); return; }}
-            // Available height: from image top to viewport bottom, minus page-nav+zoom below (~80px)
-            var availH = Math.max(280, window.parent.innerHeight - top - 80);
-            var dispH = availH * {_zoom_pct} / 100;
-            var dispW = dispH * img.naturalWidth / img.naturalHeight;
-            img.style.setProperty('height', dispH + 'px', 'important');
-            img.style.setProperty('width', dispW + 'px', 'important');
-            img.style.setProperty('max-width', 'none', 'important');
-            img.style.setProperty('display', 'block', 'important');
-            img.style.setProperty('margin', '0', 'important');
+            var top = container.getBoundingClientRect().top;
+            // top < 2 means element not yet positioned — retry
+            if (top < 2) {{ setTimeout(_sizeImg, 200); return; }}
+            var availH = Math.max(280, window.parent.innerHeight - top - 24);
+            var dispH  = Math.round(availH * {_zoom_pct} / 100);
+            // Container: fixed viewport height, scrolls internally when image overflows
+            container.style.height   = availH + 'px';
+            container.style.overflow = 'auto';
+            // Image: height-driven so aspect ratio is always preserved;
+            // at zoom > 100% image exceeds container → inner scroll, not page scroll
+            img.style.height      = dispH + 'px';
+            img.style.width       = 'auto';
+            img.style.maxWidth    = 'none';
+            img.style.display     = 'block';
+            img.style.margin      = '0 auto';
             img.style.borderRadius = '2px';
-            // Walk every wrapper between img and the column, forcing full-width flex centering.
-            // Only apply overflow/maxHeight on the stImage element itself.
-            var stImgEl = img.closest('[data-testid="stImage"]');
-            var colEl   = img.closest('[data-testid="column"]');
-            var node = img.parentElement;
-            while (node && node !== colEl) {{
-                node.style.setProperty('display', 'flex', 'important');
-                node.style.setProperty('justify-content', 'center', 'important');
-                node.style.setProperty('align-items', 'flex-start', 'important');
-                node.style.setProperty('width', '100%', 'important');
-                node = node.parentElement;
-            }}
-            if (stImgEl) {{
-                stImgEl.style.setProperty('overflow', ({_zoom_pct} > 100) ? 'auto' : 'hidden', 'important');
-                stImgEl.style.setProperty('max-height', availH + 'px', 'important');
-            }}
         }}
 
+        // base64 images decode synchronously — complete is true immediately
         if (img.complete && img.naturalWidth) {{ doSize(); }}
         else {{
             img.addEventListener('load', doSize, {{once: true}});
@@ -893,7 +907,14 @@ with tab_reader:
         elif pdf_bytes:
             with st.spinner("Rendering…"):
                 png = render_page(pdf_bytes, page_idx)
-            st.image(png, use_container_width=False)
+            _png_b64 = base64.b64encode(png).decode()
+            st.markdown(
+                f'<div class="slugger-pdf-reader" style="background:#0D1214;'
+                f'border-radius:6px;border:1px solid #0060FE15;">'
+                f'<img src="data:image/png;base64,{_png_b64}">'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
         else:
             st.markdown(
                 "<div class='reader-pdf-container' style='display:flex;align-items:center;"
@@ -1038,6 +1059,19 @@ else{d.exitFullscreen();}
             f"confidence: {scene.confidence}</p>",
             unsafe_allow_html=True,
         )
+
+        _scene_flags = getattr(scene, "flags", [])
+        if _scene_flags:
+            _flags_html = " ".join(
+                f"<span style='background:#b71c1c;color:#fff;font-size:0.65rem;"
+                f"font-weight:700;padding:2px 7px;border-radius:3px;"
+                f"letter-spacing:0.06em;margin-right:4px'>{_f}</span>"
+                for _f in _scene_flags
+            )
+            st.markdown(
+                f"<div style='margin-top:-4px;margin-bottom:6px'>{_flags_html}</div>",
+                unsafe_allow_html=True,
+            )
 
         # ── Stage Directions ──────────────────────────────────────────────────
         _dir_key = f"_dir_{scene_idx}"
@@ -1198,6 +1232,7 @@ else{d.exitFullscreen();}
 
 with tab_breakdown:
     st.caption(
+        "Tick **▶** on any row to open it in the Reader. "
         "Edit **Approach**, **VFX Notes**, and **Production Notes** inline. "
         "Click **Save & Learn** to store your VP preferences."
     )
@@ -1253,8 +1288,10 @@ with tab_breakdown:
 """
     st.markdown(summary_html, unsafe_allow_html=True)
 
+    # ── Scene table — ▶ checkbox navigates to Reader, other columns editable ──
     live_df = pd.DataFrame([
         {
+            "▶":                False,
             "Sc #":             s.number or str(i + 1),
             "Slug Line":        s.raw_slug,
             "INT/EXT":          s.int_ext,
@@ -1263,38 +1300,70 @@ with tab_breakdown:
             "Pages":            s.page_count_str,
             "Approach":         s.recommendation,
             "Confidence":       s.confidence,
+            "Flags":            " · ".join(getattr(s, "flags", [])),
             "VFX Notes":        s.vfx_notes,
             "Production Notes": s.production_notes,
         }
         for i, s in enumerate(scenes)
     ])
 
+    # Version counter: incrementing the key forces the browser to instantiate
+    # a brand-new data_editor element, guaranteed to have no ticked checkboxes.
+    _bd_ver     = st.session_state.get("_bd_ver", 0)
+    _editor_key = f"breakdown_editor_{_bd_ver}"
+
     edited_df = st.data_editor(
         live_df,
         column_config={
-            "Sc #":      st.column_config.TextColumn("Sc #", width="small"),
-            "Slug Line": st.column_config.TextColumn("Slug Line", width="large"),
-            "INT/EXT":   st.column_config.TextColumn("INT/EXT", width="small"),
-            "Location":  st.column_config.TextColumn("Location", width="medium"),
-            "Time":      st.column_config.TextColumn("Time", width="small"),
-            "Pages":     st.column_config.TextColumn("Pages", width="small"),
+            "▶":         st.column_config.CheckboxColumn("▶", help="Open in Reader", width="small"),
+            "Sc #":      st.column_config.TextColumn("Sc #", width="small", disabled=True),
+            "Slug Line": st.column_config.TextColumn("Slug Line", width="large", disabled=True),
+            "INT/EXT":   st.column_config.TextColumn("INT/EXT", width="small", disabled=True),
+            "Location":  st.column_config.TextColumn("Location", width="medium", disabled=True),
+            "Time":      st.column_config.TextColumn("Time", width="small", disabled=True),
+            "Pages":     st.column_config.TextColumn("Pages", width="small", disabled=True),
             "Approach":  st.column_config.SelectboxColumn("Approach", options=_options(), width="medium"),
             "Confidence": st.column_config.TextColumn("Confidence", width="small", disabled=True),
+            "Flags":      st.column_config.TextColumn("Flags", width="small", disabled=True),
             "VFX Notes":        st.column_config.TextColumn("VFX Notes", width="medium"),
             "Production Notes": st.column_config.TextColumn("Production Notes", width="large"),
         },
         use_container_width=True,
         hide_index=True,
         num_rows="fixed",
-        key="breakdown_editor",
+        key=_editor_key,
     )
 
+    # Sync editable columns back to scene objects
     for i, row in edited_df.iterrows():
         if i < len(scenes):
             _rec = row["Approach"]
             scenes[i].recommendation   = _rec if isinstance(_rec, str) else ""
             scenes[i].vfx_notes        = row["VFX Notes"] or ""
             scenes[i].production_notes = row["Production Notes"] or ""
+
+    # ▶ checkbox: navigate to Reader and reset the tick.
+    # Bumping _bd_ver changes the widget key on the next render — the browser sees
+    # a new element with no history, so all checkboxes start at False.
+    _checked = edited_df.index[edited_df["▶"] == True].tolist()
+    if _checked:
+        _nav_row = _checked[0]
+        st.session_state["_bd_ver"] = _bd_ver + 1
+        st.session_state.pop(_editor_key, None)
+        st.session_state["_pending_reader_jump"] = {
+            "scene_idx": _nav_row,
+            "page_idx":  int(scenes[_nav_row].page_start),
+        }
+        st.session_state["_jump_to_reader"] = True
+        st.rerun()
+
+    if st.session_state.pop("_jump_to_reader", False):
+        components.html("""<script>
+(function(){
+    var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+    if (tabs.length > 0) tabs[0].click();
+})();
+</script>""", height=0)
 
     btn_l, btn_r = st.columns([2, 2])
     with btn_l:
@@ -1332,16 +1401,62 @@ with tab_location:
 
     st.caption(f"{len(groups)} unique root locations · {len(scenes)} total scenes.")
 
-    for root_loc in sorted(groups.keys()):
+    for _loc_idx, root_loc in enumerate(sorted(groups.keys())):
         loc_scenes = groups[root_loc]
         total_p = sum(_eighths_to_float(s.page_count_str) for s in loc_scenes)
+
+        # Summarise current approaches for this location
+        _loc_approaches = [s.recommendation for s in loc_scenes if s.recommendation]
+        _unique_rec = set(_loc_approaches)
+        _approach_summary = (
+            next(iter(_unique_rec)) if len(_unique_rec) == 1
+            else f"({len(_unique_rec)} approaches)"
+        )
+
         label = (
             f"**{root_loc}** — {len(loc_scenes)} scene{'s' if len(loc_scenes) != 1 else ''}, "
-            f"{_eighths_str_from_float(total_p)} pages"
+            f"{_eighths_str_from_float(total_p)} pages · {_approach_summary}"
         )
         with st.expander(label, expanded=False):
+            # ── Apply-to-location controls ─────────────────────────────────
+            _sel_col, _btn_col = st.columns([3, 1])
+            _loc_opts = _options()
+            _dominant = _loc_approaches[0] if _loc_approaches else _loc_opts[0]
+            _default_idx = _loc_opts.index(_dominant) if _dominant in _loc_opts else 0
+            with _sel_col:
+                _sel_app = st.selectbox(
+                    "Apply to all scenes at this location",
+                    options=_loc_opts,
+                    index=_default_idx,
+                    key=f"_loc_sel_{_loc_idx}",
+                    label_visibility="collapsed",
+                )
+            with _btn_col:
+                if st.button(
+                    f"Apply to all {len(loc_scenes)}",
+                    key=f"_loc_apply_{_loc_idx}",
+                    use_container_width=True,
+                ):
+                    for _sc in loc_scenes:
+                        _sc.recommendation = _sel_app
+                    for _k in list(st.session_state.keys()):
+                        if _k.startswith("_rec_"):
+                            del st.session_state[_k]
+                    st.session_state.pop("_xlsx_sig", None)
+                    st.success(
+                        f"Set **{_sel_app}** on all {len(loc_scenes)} "
+                        f"{root_loc} scene(s)."
+                    )
+                    st.rerun()
+
             st.dataframe(pd.DataFrame([
-                {"Sc #": s.number, "Slug Line": s.raw_slug, "Pages": s.page_count_str, "Approach": s.recommendation}
+                {
+                    "Sc #":     s.number,
+                    "Slug Line": s.raw_slug,
+                    "Pages":    s.page_count_str,
+                    "Approach": s.recommendation,
+                    "Flags":    " · ".join(getattr(s, "flags", [])),
+                }
                 for s in loc_scenes
             ]), use_container_width=True, hide_index=True)
 
@@ -1394,6 +1509,60 @@ with tab_options:
             mtime = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
             marker = " ◀ current" if p.stem == title else ""
             st.caption(f"  **{p.stem}** — {mtime}{marker}")
+
+    st.divider()
+
+    # ── Knowledge Base ────────────────────────────────────────────────────────
+    st.subheader("Knowledge Base")
+    st.caption(
+        "Export your learned rules to share across Slugger installs. "
+        "Merging adds vote counts — it never overwrites; conflicts resolve by majority."
+    )
+
+    _kb_col_exp, _kb_col_imp = st.columns(2)
+
+    with _kb_col_exp:
+        _kb_json = export_rules_json(st.session_state.rules)
+        st.download_button(
+            "Export Knowledge Base",
+            data=_kb_json.encode("utf-8"),
+            file_name="slugger_knowledge.json",
+            mime="application/json",
+            use_container_width=True,
+            key="btn_export_kb",
+        )
+        _kb_total = rule_stats(st.session_state.rules)["total"]
+        st.caption(f"{_kb_total} location rules in current base.")
+
+    with _kb_col_imp:
+        _kb_upload = st.file_uploader(
+            "Import & Merge Knowledge Base",
+            type=["json"],
+            key="kb_import_uploader",
+            label_visibility="collapsed",
+        )
+        if _kb_upload:
+            try:
+                _kb_incoming = json.loads(_kb_upload.getvalue())
+                _inc_learned = _kb_incoming.get("learned", {})
+                _base_learned = st.session_state.rules.get("learned", {})
+                _new_locs  = [l for l in _inc_learned if l not in _base_learned]
+                _conf_locs = [
+                    l for l in _inc_learned if l in _base_learned
+                    and _inc_learned[l].get("recommendation") != _base_learned[l].get("recommendation")
+                ]
+                st.caption(
+                    f"**{len(_inc_learned)}** rules in file · "
+                    f"**{len(_new_locs)}** new · "
+                    f"**{len(_conf_locs)}** conflicting (will vote)"
+                )
+                if st.button("Merge into base", type="primary", key="btn_merge_kb"):
+                    st.session_state.rules = merge_rules(st.session_state.rules, _kb_incoming)
+                    _new_total = rule_stats(st.session_state.rules)["total"]
+                    st.success(f"Merged. {_new_total} total rules.")
+                    st.rerun()
+            except (json.JSONDecodeError, KeyError):
+                st.error("Invalid knowledge base file — expected Slugger JSON format.")
 
     st.divider()
 
@@ -1657,11 +1826,43 @@ checkboxes to the new defaults; you can then override individually.
 | Common local EXT. | LOCATION |
 | Generic INT. | EITHER |
 
+### Frequency adjustments
+
+After the per-scene heuristics run, Slugger applies a second pass using
+location statistics across the whole script:
+
+| Signal | Effect |
+|---|---|
+| Location appears ≤ 2 times, ≤ 1 page total | EITHER → VPROD (rare location = good LED candidate) |
+| Location appears ≥ 6 times OR ≥ 5 pages total | EITHER → STUDIO (recurring = economical to build) |
+
+Confidence is shown as `frequency (unique)` or `frequency (recurring)`.
+Learned rules are never overridden by frequency adjustments.
+
+### Stunt flag
+
+Scenes with action-heavy stage directions (chase, crash, stunt, high-speed, etc.)
+are flagged **STUNT** in the Reader panel and the Scene Breakdown table.
+The approach is not changed — the flag is a prompt to review the scene.
+
+### Apply to Location
+
+In the **By Location** tab, each location group has an approach selector
+and **Apply to all N** button. Changing the approach here updates every
+scene with that root location simultaneously.
+
 ### Learning
 
 Edit **Approach** in the Reader or Scene Breakdown table, then click
 **Save & Learn** to store your choice globally. The same location string on
 any future script will use your stored recommendation.
+
+### Knowledge Base sharing
+
+In **Options → Knowledge Base**, export your learned rules as a JSON file
+to share with other Slugger installs. Import a file from a colleague to
+merge their knowledge into yours — vote counts accumulate and conflicts
+resolve by majority.
 
 ### Auto-save
 
