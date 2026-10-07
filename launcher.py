@@ -19,6 +19,7 @@ import screenplay_parser  # noqa: F401
 import vp_heuristics      # noqa: F401
 import exporter           # noqa: F401
 import project_state      # noqa: F401
+import mockroll_link      # noqa: F401  (Export to Mock & Roll)
 
 
 def _resource(relative: str) -> str:

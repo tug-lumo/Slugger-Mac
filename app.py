@@ -24,6 +24,7 @@ from approach_config import (
     sol_key as _sk, LEGACY_NAMES,
 )
 from screenplay_parser import parse_screenplay, Scene
+from mockroll_link import handoff_bytes as mockroll_handoff_bytes
 from vp_heuristics import (
     R_VPROD, R_INT_CAR, R_INT_PLANE, R_HYBRID_VIRTUAL,
     R_SUBWAY_TRAIN, R_PLATFORM, R_ROOFTOP, R_DESERT,
@@ -1180,6 +1181,33 @@ else{d.exitFullscreen();}
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
             key="export_reader",
+        )
+
+        # ── Hand off to Mock & Roll (Lumostage's stage planner) ──────────────
+        _mr_text = st.checkbox(
+            "Include script text (dialogue & action)",
+            value=False, key="mr_include_text",
+            help="On for internal use: lets Mock & Roll pick lines onto storyboard frames. "
+                 "Leave off for a copy going to a client.",
+        )
+        _mr_sig = _xlsx_sig + f"|{_mr_text}|" + ";".join(
+            f"{s.number}|{json.dumps(getattr(s, 'volume_solutions', {}), sort_keys=True)}|{getattr(s, 'stage_directions_notes', '')}"
+            for s in scenes
+        )
+        if st.session_state.get("_mr_sig") != _mr_sig:
+            st.session_state["_mr_sig"] = _mr_sig
+            st.session_state["_mr_bytes"] = mockroll_handoff_bytes(
+                scenes, title, total_pages, st.session_state.get("approach_config"),
+                include_text=_mr_text, pdf_bytes=load_pdf_bytes(title) if _mr_text else None,
+            )
+        st.download_button(
+            "Export to Mock & Roll",
+            data=st.session_state["_mr_bytes"],
+            file_name=f"{title}.lumoscript.json",
+            mime="application/json",
+            use_container_width=True,
+            key="export_mockroll",
+            help="Open in Mock & Roll: File → Import script…",
         )
 
         # ── Add Missing Scene ─────────────────────────────────────────────────
