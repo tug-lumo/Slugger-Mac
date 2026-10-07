@@ -158,7 +158,7 @@ def _merge(elements: list[dict]) -> list[dict]:
     for e in elements:
         prev = out[-1] if out else None
         if (prev and e["t"] == prev["t"] and e["t"] in ("action", "dialogue", "paren")
-                and e["p"] == prev["p"] and 0 <= e["y"] - prev["y2"] < 6):
+                and e["p"] == prev["p"] and -4 <= e["y"] - prev["y2"] < 8):   # line boxes overlap slightly
             prev["text"] += " " + e["text"]
             prev["y2"] = e["y2"]
         else:
